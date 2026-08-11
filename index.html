@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="经过事实核查、清晰易懂的 AI 学习笔记。">
+  <title>AI Learning · 学习笔记</title>
+  <style>
+    :root {
+      --bg:#f5f8fb;--surface:#fff;--surface-alt:#edf4f8;--text:#183247;
+      --muted:#587080;--border:#cfdee7;--primary:#0e7490;--primary-soft:#dff3f7;
+      --shadow:0 12px 32px rgba(29,66,89,.08)
+    }
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+      --bg:#0f1b24;--surface:#172631;--surface-alt:#1d313e;--text:#e3edf2;
+      --muted:#a6bac6;--border:#304754;--primary:#59c4dc;--primary-soft:#163d48;--shadow:none
+    }}
+    :root[data-theme="dark"]{
+      --bg:#0f1b24;--surface:#172631;--surface-alt:#1d313e;--text:#e3edf2;
+      --muted:#a6bac6;--border:#304754;--primary:#59c4dc;--primary-soft:#163d48;--shadow:none
+    }
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75}
+    main{width:min(100% - 32px,920px);margin:auto;padding:72px 0 96px}
+    header{display:grid;gap:18px;padding-bottom:40px;border-bottom:1px solid var(--border)}
+    .eyebrow{color:var(--primary);font:700 .78rem ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase}
+    h1,h2,h3,p{margin:0}h1{max-width:720px;font:700 clamp(2.4rem,7vw,4.5rem)/1.15 "Songti SC",STSong,serif;letter-spacing:-.035em;text-wrap:balance}
+    .lead{max-width:680px;color:var(--muted);font-size:1.08rem}.principles{display:flex;flex-wrap:wrap;gap:8px}.principles span{padding:5px 10px;border:1px solid var(--border);background:var(--surface-alt);font-size:.84rem}
+    section{display:grid;gap:18px;padding-top:48px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    article{display:grid;gap:14px;padding:24px;border-top:4px solid var(--primary);background:var(--surface);box-shadow:var(--shadow)}
+    article p{color:var(--muted)}.meta{font:700 .78rem ui-monospace,Menlo,monospace;color:var(--primary);letter-spacing:.05em}
+    a{color:inherit;text-decoration:none}article:hover{transform:translateY(-3px);transition:transform .2s ease}article a{color:var(--primary);font-weight:700}.arrow{display:inline-block;transition:transform .2s ease}article:hover .arrow{transform:translateX(4px)}
+    footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--border);color:var(--muted);font-size:.88rem}
+    @media(max-width:650px){main{padding-top:44px}.grid{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){article,article .arrow{transition:none}article:hover{transform:none}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="eyebrow">AI Learning · Knowledge Notes</div>
+      <h1>把复杂的 AI 概念，讲到真正看懂</h1>
+      <p class="lead">这里收录经过事实核查的 AI 学习笔记。每篇先建立清晰的核心机制，再逐步补充必要细节，避免用更多术语掩盖原本的问题。</p>
+      <div class="principles"><span>清晰易懂</span><span>权威来源</span><span>动态流程图</span><span>不过度引入概念</span></div>
+    </header>
+
+    <section aria-labelledby="notes-title">
+      <h2 id="notes-title">学习笔记</h2>
+      <div class="grid">
+        <article>
+          <div class="meta">LLM SYSTEMS · 2026-08-11</div>
+          <h3>大模型训练、RL在线推理与训推一体化</h3>
+          <p>从预训练、SFT、RLHF 和 RL 出发，理解 Rollout、PPO/GRPO、权重更新，以及训练结束后如何交给 SGLang/vLLM 服务用户。</p>
+          <a href="./notes/llm-training-rl-inference/">阅读笔记 <span class="arrow">→</span></a>
+        </article>
+      </div>
+    </section>
+
+    <footer>MetMS2023 · AI Learning Notes</footer>
+  </main>
+</body>
+</html>
