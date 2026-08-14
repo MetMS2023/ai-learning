@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="从目的、架构、权重更新、LoRA、记忆保护与开放问题理解 Test-Time Training。">
+  <title>Test-Time Training：让 LLM 在使用时继续学习</title>
+  <style>
+    :root {
+      --bg:#f5f8fb;--surface:#fff;--surface-alt:#edf4f8;--text:#183247;
+      --muted:#587080;--border:#cfdee7;--primary:#0e7490;--primary-soft:#dff3f7;
+      --orange:#b85f12;--orange-soft:#fff0df;--blue:#315f91;--blue-soft:#e5eef9;
+      --good:#18724b;--good-soft:#e4f5ed;--red:#a23a36;--red-soft:#fde9e7;
+      --shadow:0 12px 32px rgba(29,66,89,.08)
+    }
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+      --bg:#0f1b24;--surface:#172631;--surface-alt:#1d313e;--text:#e3edf2;
+      --muted:#a6bac6;--border:#304754;--primary:#59c4dc;--primary-soft:#163d48;
+      --orange:#f0a253;--orange-soft:#422c19;--blue:#8ab8e8;--blue-soft:#20364d;
+      --good:#72d6aa;--good-soft:#173c30;--red:#f19a94;--red-soft:#482423;--shadow:none
+    }}
+    :root[data-theme="dark"]{
+      --bg:#0f1b24;--surface:#172631;--surface-alt:#1d313e;--text:#e3edf2;
+      --muted:#a6bac6;--border:#304754;--primary:#59c4dc;--primary-soft:#163d48;
+      --orange:#f0a253;--orange-soft:#422c19;--blue:#8ab8e8;--blue-soft:#20364d;
+      --good:#72d6aa;--good-soft:#173c30;--red:#f19a94;--red-soft:#482423;--shadow:none
+    }
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:17px;line-height:1.8}
+    main{width:min(100% - 32px,900px);margin:auto;padding:56px 0 88px}header{display:grid;gap:18px;padding-bottom:36px;border-bottom:1px solid var(--border)}
+    h1,h2,h3,p,ul,ol,blockquote,table{margin:0}h1,h2,h3{text-wrap:balance;line-height:1.35}h1{max-width:820px;font:700 clamp(2.1rem,5vw,3.7rem)/1.16 "Songti SC",STSong,serif;letter-spacing:-.035em}h2{font-size:clamp(1.45rem,3vw,1.95rem)}h3{font-size:1.08rem}
+    .eyebrow{color:var(--primary);font:700 .78rem ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase}.lead{max-width:760px;color:var(--muted);font-size:1.08rem}.thesis{padding:18px 20px;border-left:4px solid var(--primary);background:var(--primary-soft);font-weight:650}
+    nav{margin-top:28px;padding:22px 24px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}nav strong{display:block;margin-bottom:10px}nav ol{display:grid;gap:6px;padding-left:22px}a{color:var(--primary);text-underline-offset:4px}nav a{color:var(--text);text-decoration:none}nav a:hover{color:var(--primary)}
+    section{display:grid;gap:20px;padding-top:54px}.section-heading{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start}.number{display:grid;width:34px;height:34px;place-items:center;border:1px solid var(--primary);color:var(--primary);font:700 .82rem ui-monospace,Menlo,monospace}
+    .note,.warning,.conclusion{padding:18px 20px;border:1px solid var(--border);background:var(--surface-alt)}.note strong,.warning strong,.conclusion strong{display:block;margin-bottom:4px}.warning{border-color:var(--orange);background:var(--orange-soft)}.conclusion{border-color:var(--good);background:var(--good-soft)}
+    .process-chart{display:flex;align-items:stretch;width:100%;padding:22px;overflow-x:auto;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.process-node{position:relative;display:grid;flex:1 0 132px;min-height:96px;align-content:center;justify-items:center;gap:5px;padding:14px 12px;border:1px solid var(--border);background:var(--surface-alt);text-align:center}.process-node strong{line-height:1.35}.process-node small{color:var(--muted);line-height:1.4}.process-node.active{border-color:var(--primary);background:var(--primary-soft)}.process-node.train{border-color:var(--orange);background:var(--orange-soft)}.process-node.good{border-color:var(--good);background:var(--good-soft)}
+    .process-arrow{position:relative;flex:0 0 44px;min-width:44px}.process-arrow::before{content:"";position:absolute;top:50%;left:5px;right:8px;height:2px;background:var(--border);transform:translateY(-50%)}.process-arrow::after{content:"";position:absolute;top:50%;right:5px;width:9px;height:9px;border-top:2px solid var(--primary);border-right:2px solid var(--primary);transform:translateY(-50%) rotate(45deg)}.process-arrow span{position:absolute;top:calc(50% - 4px);left:5px;width:8px;height:8px;border-radius:50%;background:var(--primary);animation:travel 2.2s ease-in-out infinite}
+    @keyframes travel{from{transform:translateX(0);opacity:.15}50%{opacity:1}to{transform:translateX(26px);opacity:.15}}
+    .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.component-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.card{display:grid;align-content:start;gap:10px;padding:20px;border-top:4px solid var(--primary);background:var(--surface);box-shadow:var(--shadow)}.card p{color:var(--muted);font-size:.94rem}.card.orange{border-color:var(--orange)}.card.blue{border-color:var(--blue)}.card.good{border-color:var(--good)}.card.red{border-color:var(--red)}
+    .problem-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.problem{padding:18px;border:1px solid var(--border);background:var(--surface)}.problem .label{display:block;margin-bottom:8px;color:var(--primary);font:700 .76rem ui-monospace,Menlo,monospace;letter-spacing:.08em}.problem p{color:var(--muted);font-size:.93rem}
+    .architecture{display:grid;gap:18px;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.arch-group{display:grid;grid-template-columns:155px 1fr;gap:14px;align-items:stretch}.arch-label{display:grid;place-items:center;padding:14px;border:1px solid var(--border);background:var(--surface-alt);font-weight:700;text-align:center}.block-stack{display:grid;gap:8px}.module{position:relative;display:grid;place-items:center;min-height:62px;padding:12px;border:1px solid var(--border);background:var(--surface-alt);text-align:center}.module:not(:last-child)::after{content:"↓";position:absolute;bottom:-18px;z-index:2;color:var(--primary);font-weight:800}.module small{display:block;color:var(--muted)}.module.frozen{border-color:var(--blue);background:var(--blue-soft)}.module.dynamic{border-color:var(--orange);background:var(--orange-soft)}.module.safe{border-color:var(--good);background:var(--good-soft)}.legend{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:.86rem}.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{display:inline-block;width:12px;height:12px;border:2px solid var(--border)}.legend .f{border-color:var(--blue);background:var(--blue-soft)}.legend .d{border-color:var(--orange);background:var(--orange-soft)}.legend .s{border-color:var(--good);background:var(--good-soft)}
+    .loop-chart{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:28px;padding:26px 22px 46px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.loop-chart .process-node:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-22px;color:var(--primary);font-size:1.25rem;transform:translate(50%,-50%)}.loop-back{grid-column:1/-1;position:relative;height:2px;margin:-8px 7% 0;background:var(--primary)}.loop-back::before{content:"";position:absolute;left:-1px;top:-4px;width:8px;height:8px;border-left:2px solid var(--primary);border-bottom:2px solid var(--primary);transform:rotate(45deg)}.loop-back::after{content:"继续读取下一批 Token";position:absolute;left:50%;top:8px;padding:0 8px;background:var(--surface);color:var(--muted);font-size:.8rem;transform:translateX(-50%)}
+    .two-loop{display:grid;gap:18px;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.loop-box{display:grid;gap:12px;padding:18px;border:1px solid var(--border)}.loop-box.inner{border-left:4px solid var(--orange);background:var(--orange-soft)}.loop-box.outer{border-left:4px solid var(--primary);background:var(--primary-soft)}.mini-flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.mini-flow span{padding:7px 10px;border:1px solid var(--border);background:var(--surface);font-size:.9rem}.mini-flow b{color:var(--primary)}
+    .model-map{display:grid;gap:0;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.map-node{display:grid;place-items:center;min-height:64px;padding:12px 16px;border:1px solid var(--border);background:var(--surface-alt);text-align:center}.map-node.input,.map-node.output{border-color:var(--primary);background:var(--primary-soft);font-weight:700}.map-arrow{display:grid;height:34px;place-items:center;color:var(--primary);font-size:1.3rem;font-weight:800}.map-block{display:grid;gap:8px;padding:16px;border:1px solid var(--blue);background:var(--blue-soft)}.map-block>strong{text-align:center}.map-parts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.map-part{padding:10px;border:1px solid var(--border);background:var(--surface);text-align:center}.map-dots{text-align:center;color:var(--muted);font-size:1.5rem;letter-spacing:.25em}
+    .meta-tree{display:grid;grid-template-columns:180px 1fr;gap:18px;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.meta-root{display:grid;place-items:center;padding:18px;border:1px solid var(--primary);background:var(--primary-soft);text-align:center}.meta-branches{display:grid;gap:10px}.meta-branch{position:relative;display:grid;grid-template-columns:180px 1fr;gap:10px;align-items:center;padding-left:24px}.meta-branch::before{content:"";position:absolute;left:0;top:50%;width:18px;height:1px;background:var(--primary)}.meta-branch::after{content:"";position:absolute;left:0;top:-6px;bottom:-6px;width:1px;background:var(--border)}.meta-branch:first-child::after{top:50%}.meta-branch:last-child::after{bottom:50%}.meta-name{padding:12px;border:1px solid var(--orange);background:var(--orange-soft);font-weight:700}.meta-steps{padding:12px;border:1px solid var(--border);background:var(--surface-alt);font:600 .88rem ui-monospace,Menlo,monospace}.block-flow{display:grid;gap:10px;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.block-end{padding:13px 16px;border:1px solid var(--primary);background:var(--primary-soft);font-weight:700;text-align:center}.stage-arrow{display:grid;height:24px;place-items:center;color:var(--primary);font-size:1.25rem;font-weight:800}.residual-unit{display:grid;grid-template-columns:minmax(0,1fr) 118px;grid-template-areas:"main skip" "merge merge";gap:0 14px}.unit-main{grid-area:main;display:grid;grid-template-columns:54px 1fr;gap:12px;align-items:center}.stage-tag{display:grid;width:44px;height:44px;place-items:center;border-radius:50%;font:700 .75rem ui-monospace,Menlo,monospace}.stage-tag.frozen{color:var(--blue);background:var(--blue-soft);border:1px solid var(--blue)}.stage-tag.dynamic{color:var(--orange);background:var(--orange-soft);border:1px solid var(--orange)}.stage-tag.safe{color:var(--good);background:var(--good-soft);border:1px solid var(--good)}.stage-box{display:grid;gap:3px;min-height:76px;align-content:center;padding:14px 16px;border:1px solid var(--border);background:var(--surface-alt)}.stage-box small{color:var(--muted)}.skip-path{grid-area:skip;position:relative;display:grid;place-items:center;color:var(--muted);font-size:.78rem;text-align:center}.skip-path::before{content:"";position:absolute;inset:8px 50% -14px 0;border-top:2px solid var(--primary);border-right:2px solid var(--primary);border-bottom:2px solid var(--primary);border-radius:0 12px 12px 0}.skip-path span{position:relative;z-index:1;padding:3px 6px;background:var(--surface)}.merge{grid-area:merge;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;margin-top:8px;color:var(--primary);font-size:.86rem;font-weight:700}.merge::before{content:"＋";display:grid;width:26px;height:26px;place-items:center;margin-left:calc(50% - 13px);border:2px solid var(--primary);border-radius:50%;background:var(--surface)}
+    .table-wrap{overflow-x:auto;border:1px solid var(--border)}table{width:100%;min-width:700px;border-collapse:collapse;background:var(--surface);font-size:.94rem}th,td{padding:14px 16px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}th{background:var(--surface-alt);font-size:.86rem}tr:last-child td{border-bottom:0}.cite{font-size:.78em;font-weight:700;text-decoration:none;vertical-align:super}
+    .guardrails{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.guard{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:18px;border:1px solid var(--border);background:var(--surface)}.guard .icon{display:grid;width:34px;height:34px;place-items:center;border-radius:50%;background:var(--good-soft);color:var(--good);font-weight:800}.guard p{color:var(--muted);font-size:.92rem}
+    .spectrum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;padding:20px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.spectrum>div{display:grid;gap:7px;padding:16px;border-right:1px solid var(--border)}.spectrum>div:last-child{border-right:0}.spectrum small{color:var(--muted)}.layer-stack{display:grid;gap:10px;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.layer-row{display:grid;grid-template-columns:130px 1fr 1.2fr;gap:10px;align-items:stretch}.layer-row>div{display:grid;align-content:center;padding:12px 14px;border:1px solid var(--border);background:var(--surface-alt)}.layer-row .scope{font-weight:700;color:var(--primary)}.layer-row .state{color:var(--muted);font-size:.9rem}.future-label{display:inline-flex;width:max-content;padding:4px 9px;border:1px solid var(--orange);background:var(--orange-soft);color:var(--orange);font-size:.78rem;font-weight:700;letter-spacing:.04em}
+    .summary{display:grid;gap:16px;margin-top:56px;padding:28px;border:1px solid var(--primary);background:var(--primary-soft)}.summary ol{display:grid;gap:8px;padding-left:22px}footer{display:grid;gap:14px;margin-top:52px;padding-top:28px;border-top:1px solid var(--border);color:var(--muted);font-size:.9rem}footer ul{display:grid;gap:7px;padding-left:22px}
+    @media(max-width:740px){main{width:min(100% - 24px,900px);padding-top:38px}.section-heading{grid-template-columns:1fr}.cards,.component-cards,.problem-grid,.guardrails,.spectrum{grid-template-columns:1fr}.component-cards{margin-inline:0}.spectrum>div{border-right:0;border-bottom:1px solid var(--border)}.spectrum>div:last-child{border-bottom:0}.process-chart{flex-direction:column;overflow:visible}.process-arrow{flex-basis:36px;min-width:0;min-height:36px}.process-arrow::before{top:4px;bottom:8px;left:50%;right:auto;width:2px;height:auto;transform:translateX(-50%)}.process-arrow::after{top:auto;right:auto;bottom:5px;left:50%;transform:translateX(-50%) rotate(135deg)}.process-arrow span{top:4px;left:calc(50% - 4px);animation-name:travel-down}.loop-chart{grid-template-columns:1fr;gap:30px;padding-bottom:52px}.loop-chart .process-node:not(:last-child)::after{top:auto;right:50%;bottom:-27px;transform:translate(50%,0) rotate(90deg)}.loop-back{grid-column:1;margin-inline:12%}.arch-group{grid-template-columns:1fr}.map-parts{grid-template-columns:1fr}.meta-tree{grid-template-columns:1fr}.meta-branch{grid-template-columns:1fr;padding:0}.meta-branch::before,.meta-branch::after{display:none}.layer-row{grid-template-columns:1fr}.residual-unit{grid-template-columns:1fr;grid-template-areas:"main" "skip" "merge";gap:8px}.skip-path{min-height:32px}.skip-path::before{inset:50% 12% auto 12%;border-right:0;border-bottom:0;border-radius:0}.merge{grid-template-columns:1fr;text-align:center}.merge::before{margin:auto}}
+    @keyframes travel-down{from{transform:translateY(0);opacity:.15}50%{opacity:1}to{transform:translateY(22px);opacity:.15}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.process-arrow span{animation:none}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="eyebrow">Fact-checked Learning Notes · Test-Time Training</div>
+      <h1>Test-Time Training：让 LLM 在使用时继续学习</h1>
+      <p class="lead">重点不是追逐 SSI 传闻，而是理解 TTT 这条可能改变 LLM 形态的研究路线：它为什么出现、底层是否仍是 Transformer、如何把上下文写进权重，以及怎样避免“越学越笨”。</p>
+      <div class="thesis">核心直觉：<strong>今天的 LLM 把上下文当作临时草稿纸；TTT 尝试把当前经历变成一次小型训练，让有用信息进入临时权重。</strong></div>
+    </header>
+
+    <nav aria-label="学习目录">
+      <strong>学习目录</strong>
+      <ol>
+        <li><a href="#purpose">TTT 想解决什么问题</a></li>
+        <li><a href="#architecture">底层还是 Transformer 吗</a></li>
+        <li><a href="#mechanism">Inner loop 与 Outer loop：现场学习和 Meta-learning</a></li>
+        <li><a href="#lora">TTT 与 LoRA 是什么关系</a></li>
+        <li><a href="#safety">如何防止更新后变笨</a></li>
+        <li><a href="#paradigm">为什么它可能成为未来范式</a></li>
+        <li><a href="#limits">距离成熟还缺什么</a></li>
+        <li><a href="#product-shape">可能的产品形态：分层学习状态</a></li>
+      </ol>
+    </nav>
+
+    <section id="purpose">
+      <div class="section-heading"><div class="number">01</div><h2>TTT 想解决什么问题？</h2></div>
+      <p>当前 LLM 的主流范式是：先用巨量数据训练出一套固定权重，部署后只做前向计算（推理）。用户给它再长的文档，这些信息通常也只存在于当前上下文或 KV Cache 中，不会变成新的模型能力。</p>
+
+      <div class="problem-grid">
+        <article class="problem">
+          <span class="label">问题 A · 上下文成本</span>
+          <h3>全文注意力越读越慢</h3>
+          <p>Full Attention 每生成一个新 Token，都要查看越来越多的历史 Key/Value。上下文越长，每个新 Token 的成本越高。</p>
+        </article>
+        <article class="problem">
+          <span class="label">问题 B · 滑动窗口遗忘</span>
+          <h3>固定窗口快，但旧内容会离开</h3>
+          <p>Sliding-Window Attention 只看最近一段内容，因此速度稳定；代价是窗口外的 Token 不再可见。</p>
+        </article>
+        <article class="problem">
+          <span class="label">问题 C · 模型不会现场学习</span>
+          <h3>看过不等于学会</h3>
+          <p>普通推理可以临时参考一份长文档，但对话结束后，模型权重没有因这次经历而改变。</p>
+        </article>
+      </div>
+
+      <p>TTT-E2E 提出另一种处理长上下文的方式：保留一个便宜的滑动窗口负责最近内容，同时用<strong>下一 Token 预测</strong>在测试时不断训练模型，把即将离开窗口的信息压缩进临时权重。<a class="cite" href="#ref-e2e">[3]</a></p>
+
+      <div class="process-chart" role="img" aria-label="滑动窗口处理最近内容，TTT 将将要离开窗口的信息压缩到临时权重">
+        <div class="process-node"><strong>长序列不断进入</strong><small>文档、代码或历史记录</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>滑动窗口</strong><small>直接查看最近 Token</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node train"><strong>TTT 梯度更新</strong><small>从当前窗口学习</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node good"><strong>临时权重记忆</strong><small>保留可预测的模式</small></div>
+      </div>
+
+      <div class="warning"><strong>“压缩”不等于逐字保存。</strong>权重更像读完一本书后形成的理解，而不是可以精确翻页的原文。需要原句、数字和出处时，Full Attention、RAG 或外部存储仍然有价值。</div>
+    </section>
+
+    <section id="architecture">
+      <div class="section-heading"><div class="number">02</div><h2>它的底层还是 Transformer 吗？</h2></div>
+      <div class="conclusion"><strong>答案：在 2025 年 TTT-E2E 论文中，是的。</strong>它保留 Transformer 的基本骨架，只把 Full Attention 换成 Sliding-Window Attention，并让最后四分之一 Blocks 中的一部分 MLP 可以在测试时更新。<a class="cite" href="#ref-e2e">[3]</a></div>
+
+      <h3>先看一个简化的 Transformer</h3>
+      <div class="model-map" role="img" aria-label="文字 Token 经过 Embedding，再依次经过多个包含 Attention、Normalization 和 MLP 的 Transformer Blocks，最终预测下一个 Token">
+        <div class="map-node input">文字 Token</div>
+        <div class="map-arrow" aria-hidden="true">↓</div>
+        <div class="map-node"><strong>Embedding</strong><small>文字 → 数字向量</small></div>
+        <div class="map-arrow" aria-hidden="true">↓</div>
+        <div class="map-block">
+          <strong>Transformer Block 1</strong>
+          <div class="map-parts"><div class="map-part">Attention</div><div class="map-part">Normalization</div><div class="map-part">MLP</div></div>
+        </div>
+        <div class="map-arrow" aria-hidden="true">↓</div>
+        <div class="map-block">
+          <strong>Transformer Block 2</strong>
+          <div class="map-parts"><div class="map-part">Attention</div><div class="map-part">Normalization</div><div class="map-part">MLP</div></div>
+        </div>
+        <div class="map-dots" aria-hidden="true">···</div>
+        <div class="map-arrow" aria-hidden="true">↓</div>
+        <div class="map-node output">预测下一个 Token</div>
+      </div>
+
+      <h3>再认识 Transformer 里的四个基础组件</h3>
+      <div class="cards component-cards">
+        <article class="card"><h3>Embedding · 翻译器</h3><p>把文字 Token 转成模型能计算的数字向量。它定义了模型最基础的语言坐标。</p></article>
+        <article class="card blue"><h3>Attention · 查找器</h3><p>决定当前 Token 应该从前文哪些 Token 读取信息。这里它只查看最近的滑动窗口。</p></article>
+        <article class="card"><h3>Normalization · 稳压器</h3><p>把各层数值维持在稳定尺度，防止信号在深层网络中忽大忽小。</p></article>
+        <article class="card orange"><h3>MLP · 加工器</h3><p>Attention 找到信息以后，MLP 对每个 Token 的内部表示进一步加工。它包含大量可写权重。</p></article>
+      </div>
+
+      <h3>TTT-E2E 的实际层级关系</h3>
+      <div class="architecture" role="img" aria-label="TTT-E2E 从输入经冻结的Embedding，穿过前四分之三冻结Blocks，再进入后四分之一包含冻结Attention、动态MLP和静态MLP的Blocks">
+        <div class="arch-group">
+          <div class="arch-label">模型入口</div>
+          <div class="block-stack">
+            <div class="module frozen"><strong>Embedding</strong><small>冻结：把 Token 转成向量</small></div>
+          </div>
+        </div>
+        <div class="arch-group">
+          <div class="arch-label">前 3/4 Blocks<br>完全冻结</div>
+          <div class="block-stack">
+            <div class="module frozen"><strong>Sliding-Window Attention + Norm</strong><small>查看最近上下文，权重不改</small></div>
+            <div class="module frozen"><strong>普通 MLP + Norm</strong><small>继续提供稳定的预训练能力</small></div>
+          </div>
+        </div>
+        <div class="arch-group">
+          <div class="arch-label">后 1/4 Blocks<br>局部可塑</div>
+          <div class="block-stack">
+            <div class="module frozen"><strong>Sliding-Window Attention + Norm</strong><small>仍然冻结</small></div>
+            <div class="module dynamic"><strong>动态 MLP / Prime MLP</strong><small>测试时更新：写入当前上下文</small></div>
+            <div class="module safe"><strong>静态普通 MLP</strong><small>测试时冻结：保留稳定计算路径</small></div>
+          </div>
+        </div>
+        <div class="legend"><span><i class="f"></i>冻结组件</span><span><i class="d"></i>测试时更新</span><span><i class="s"></i>固定知识保护路径</span></div>
+      </div>
+
+      <div class="note"><strong>静态 MLP 到底“确保”了什么？</strong>它只确保自己的参数不被 Inner-loop Optimizer 覆盖：W<sub>static,new</sub> = W<sub>static,old</sub>。它在 Meta-training 中与整个模型一起学习，测试时作为固定计算路径继续工作；但它不是全部知识的完整备份，也不能从数学上保证动态更新后模型永远不会变笨。</div>
+
+      <div class="note"><strong>动态 MLP 与静态 MLP 不是互不相干的平行备份。</strong>根据官方代码，后 1/4 Block 先经过动态 MLP，再经过静态普通 MLP。动态 MLP 改变了中间表示，因此静态 MLP 的实际输入和输出也会间接受影响。</div>
+
+      <div class="note"><strong>残差连接是什么？</strong>动态和静态 MLP 都有残差连接：模块不是把输入完全替换掉，而是学习一个“修改量”，再与原输入相加，即<strong>输出 = 原输入 + 模块加工结果</strong>。这样即使模块学到的修改不够好，原输入仍有一条直接保留的路径。</div>
+
+      <h3>为什么只更新最后 1/4 Blocks？</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>更新范围</th><th>论文实验观察</th><th>含义</th></tr></thead>
+          <tbody>
+            <tr><td>最后 1 层或 1/8</td><td>长上下文扩展效果不足</td><td>可写入的动态权重太少，临时记忆容量不足</td></tr>
+            <tr><td>最后 1/4</td><td>已经能随上下文长度良好扩展</td><td>容量与 Backward 成本之间的甜点位</td></tr>
+            <tr><td>最后 1/2</td><td>效果与 1/4 大致相当</td><td>更新更多层没有明显收益，却需要更长的反向传播</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>因此，“最后 1/4”不是永恒定律，而是论文在当前模型和上下文范围内通过消融实验找到的折中。Embedding、Normalization 和 Attention 都保持冻结，因为论文发现把它们也放进 Inner loop 会使 Outer loop 不稳定。<a class="cite" href="#ref-e2e">[3]</a></p>
+
+      <div class="note"><strong>不要把不同 TTT 论文混成一个架构。</strong>2024 年 TTT-Linear/TTT-MLP 把隐藏状态做成独立的小型学习器；2025 年 TTT-E2E 则保留滑动窗口 Transformer，直接更新其中一部分常规 MLP。它们共享“测试时学习”原则，但结构不同。<a class="cite" href="#ref-layers">[2]</a></div>
+    </section>
+
+    <section id="mechanism">
+      <div class="section-heading"><div class="number">03</div><h2>Inner loop 与 Outer loop：现场学习和 Meta-learning</h2></div>
+      <p>先看两层循环的关系，再分别进入细节：</p>
+
+      <div class="meta-tree" role="img" aria-label="Outer loop也就是Meta-learning，选择并改善共同初始权重W0，并观察文章A、B、C各自独立Inner loop的学习结果">
+        <div class="meta-root"><strong>Outer loop</strong><span>选择并改善共同起点 W₀</span></div>
+        <div class="meta-branches">
+          <div class="meta-branch"><div class="meta-name">Inner loop · 文章 A</div><div class="meta-steps">W₀ → W₁ᴬ → W₂ᴬ</div></div>
+          <div class="meta-branch"><div class="meta-name">Inner loop · 文章 B</div><div class="meta-steps">W₀ → W₁ᴮ → W₂ᴮ</div></div>
+          <div class="meta-branch"><div class="meta-name">Inner loop · 文章 C</div><div class="meta-steps">W₀ → W₁ᶜ → W₂ᶜ</div></div>
+        </div>
+      </div>
+
+      <div class="two-loop">
+        <div class="loop-box inner"><h3>Inner loop 做什么？</h3><p>在一篇文章内部现场学习，回答：“拿到当前文章后，我的动态权重应该怎样变化？”</p></div>
+        <div class="loop-box outer"><h3>Outer loop 做什么？</h3><p>比较大量文章各自完成 Inner loop 后的效果，改善共同的 W₀，让它更善于从新文章中学习。</p></div>
+      </div>
+
+      <div class="conclusion"><strong>Outer loop 就是这里所说的 Meta-learning。</strong>它不是在部署时学习某一篇文章，而是在研发训练阶段观察大量 Inner loops 的结果，改善所有文章共同使用的初始权重 W₀。</div>
+
+      <div class="note"><strong>两层循环发生在不同阶段。</strong>研发训练阶段：Outer loop 内部反复模拟很多 Inner loops；模型部署后：拿出训练好的 W₀，只在当前文档上运行 Inner loop。文章 A 的临时 W₂ᴬ 不会直接拿去读无关的文章 B。</div>
+
+      <h3>Inner loop：模型如何一边读取、一边更新权重？</h3>
+      <p>一段已经给出的文本天然带着“标准答案”：前面的 Token 是输入，真实的下一个 Token 就是标签，所以不需要人工标注。</p>
+
+      <div class="loop-chart" role="img" aria-label="TTT 对一批 Token 先前向预测、计算下一词损失、反向传播并更新动态 MLP，然后继续读取下一批">
+        <div class="process-node active"><strong>读取一批 Token</strong><small>窗口内已有真实文本</small></div>
+        <div class="process-node"><strong>Forward</strong><small>预测每个下一 Token</small></div>
+        <div class="process-node train"><strong>Loss + Backward</strong><small>计算误差与梯度</small></div>
+        <div class="process-node good"><strong>更新动态 MLP</strong><small>信息写入临时权重</small></div>
+        <div class="loop-back" aria-hidden="true"></div>
+      </div>
+
+      <ol>
+        <li><strong>Forward：</strong>模型用当前权重读取这一批 Token，并尝试预测每个下一 Token。</li>
+        <li><strong>Loss：</strong>把预测与真实 Token 比较，得到交叉熵损失。</li>
+        <li><strong>Backward：</strong>计算动态 MLP 中哪些权重导致了预测误差，以及应朝哪个方向改变。</li>
+        <li><strong>Optimizer step：</strong>根据梯度更新动态 MLP，得到更适合当前文档的新状态。</li>
+        <li><strong>下一批：</strong>模型用新状态继续处理后续 Token。</li>
+      </ol>
+
+      <h3>Outer loop 为什么需要“梯度的梯度”？</h3>
+      <p>普通预训练只优化“固定权重时能否直接预测好”，并没有优化“经过几次 Inner-loop 更新后能否变得更好”。Outer loss 要评价更新后的 W₁、W₂，再一路追溯最初的 W₀，因此精确反传必须穿过 Inner loop 的梯度操作，相当于<strong>对梯度再求导</strong>。也可以使用一阶近似，省略部分二阶项。<a class="cite" href="#ref-e2e">[3]</a></p>
+
+      <div class="conclusion"><strong>一句话</strong>Inner loop 是“学习当前文章”；Outer loop（Meta-learning）是“提前学习怎样从文章中学得更好”。</div>
+    </section>
+
+    <section id="lora">
+      <div class="section-heading"><div class="number">04</div><h2>TTT 和 LoRA 是什么关系？</h2></div>
+      <h3>先理解 LoRA</h3>
+      <p>普通 Full Fine-tuning 会直接修改大模型原本的大量权重，训练和保存成本都很高。<strong>LoRA（Low-Rank Adaptation，低秩适配）</strong>选择冻结原始权重 W，只训练两块小矩阵 A、B，并把它们产生的增量加到原计算上：</p>
+      <div class="process-chart" role="img" aria-label="LoRA冻结大模型原始权重，只训练小型低秩矩阵A和B，并将增量叠加到基础模型输出">
+        <div class="process-node"><strong>基础权重 W</strong><small>冻结，不直接修改</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>LoRA 小矩阵 A × B</strong><small>只训练少量参数</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node good"><strong>W + ΔW</strong><small>基础能力 + 任务适配</small></div>
+      </div>
+      <div class="note"><strong>为什么叫“低秩”？</strong>不是直接训练一块巨大的 ΔW，而是用两个窄小矩阵相乘来近似它。这样需要训练和存储的参数少得多。</div>
+
+      <p>理解 LoRA 后，再看两者分工：TTT 规定<strong>在什么时候、针对什么数据学习</strong>；LoRA 只是其中一种<strong>低成本修改参数的工具</strong>。</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>概念</th><th>回答的问题</th><th>核心做法</th></tr></thead>
+          <tbody>
+            <tr><td><strong>TTT</strong></td><td>什么时候、为什么学习？</td><td>在测试或使用当前数据时执行学习，让模型适配当前实例</td></tr>
+            <tr><td><strong>LoRA</strong></td><td>怎样用更少参数完成更新？</td><td>冻结原始权重，只训练额外的低秩矩阵</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>因此，TTT <strong>可以使用 LoRA，也可以不用</strong>。例如 ARC、qTTT、Self-Guided TTT 等工作使用 LoRA 来降低每次测试时适配的成本；LoRA 让基础权重保持不动，只保存一小组临时增量。<a class="cite" href="#ref-lora">[5]</a></p>
+
+      <div class="warning"><strong>但 TTT-E2E 最终方案不是 LoRA TTT。</strong>论文的对比路线 TTT-KVB 使用过 multi-head MLP + LoRA；最终 TTT-E2E 发现，既然反向传播本身已经很贵，与其更新很多很小的 LoRA 状态，不如只更新最后四分之一 blocks 中较大的常规 MLP。这样获得更大的记忆容量，同时减少需要穿越的网络层数。<a class="cite" href="#ref-e2e">[3]</a></div>
+
+      <div class="cards">
+        <article class="card blue"><h3>LoRA 方案</h3><p>基础模型完全冻结，临时记忆放在小型低秩增量里。便宜、容易隔离，但可写入容量较小。</p></article>
+        <article class="card orange"><h3>TTT-E2E 方案</h3><p>直接更新少数较大的原生 MLP。每次更新更贵，但动态状态容量更大。</p></article>
+        <article class="card good"><h3>共同目标</h3><p>限制可塑区域，不让整个模型在一次测试输入上任意漂移。</p></article>
+      </div>
+
+      <h3>参数适配不只有 LoRA</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>适配方式</th><th>保存什么</th><th>特点</th></tr></thead>
+          <tbody>
+            <tr><td>LoRA</td><td>两组低秩增量矩阵</td><td>小巧、易加载，是目前最常见的参数高效适配方式之一</td></tr>
+            <tr><td>插入式 Adapter</td><td>插入 Transformer 的小型神经网络模块</td><td>基础权重冻结，通过额外模块修正模型行为</td></tr>
+            <tr><td>原生权重 Delta</td><td>部分原生权重相对 W₀ 的差值</td><td>无需保存整套模型，但增量可能更大，也更难高效服务</td></tr>
+            <tr><td>直接更新部分原生权重</td><td>更新后的 MLP 等参数状态</td><td>可写容量较大；TTT-E2E 的动态 MLP 属于这一思路</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><strong>共同点</strong>这些参数文件都不是独立模型。它们描述“如何修改某个特定 W₀”，因此必须记录基础模型版本、架构、目标层和 Tokenizer 等兼容信息。</div>
+    </section>
+
+    <section id="safety">
+      <div class="section-heading"><div class="number">05</div><h2>如何确保权重变化后，LLM 不会变笨？</h2></div>
+      <div class="warning"><strong>先给真实答案：目前没有绝对保证。</strong>TTT 的核心难题就是 Plasticity–Stability Trade-off：模型既要能从新上下文学习，又不能破坏预训练能力。论文使用多层防线降低风险，但这仍是开放研究问题。</div>
+
+      <div class="guardrails">
+        <article class="guard"><div class="icon">1</div><div><h3>先用 Meta-learning 做准备</h3><p>训练目标直接评价“经过 TTT 后”的表现，而不是假设任意梯度更新都会有益。</p></div></article>
+        <article class="guard"><div class="icon">2</div><div><h3>只更新 MLP</h3><p>Embedding、Normalization 和 Attention 保持冻结；论文发现更新它们会造成训练不稳定。</p></div></article>
+        <article class="guard"><div class="icon">3</div><div><h3>只开放最后四分之一 Blocks</h3><p>限制可修改范围，同时在实验中保留了足够的上下文压缩容量。</p></div></article>
+        <article class="guard"><div class="icon">4</div><div><h3>保留静态普通 MLP</h3><p>它在 Meta-training 中与模型一起学到稳定能力，测试时权重被冻结。它提供固定计算路径，但不是完整知识备份，也不能保证动态变化完全无害。</p></div></article>
+        <article class="guard"><div class="icon">5</div><div><h3>按 Mini-batch 更新</h3><p>不是每个 Token 都单独迈一步，而是聚合约 1K Token 的梯度，提高并行度并减少偶然的梯度爆炸。</p></div></article>
+        <article class="guard"><div class="icon">6</div><div><h3>把更新当作会话状态</h3><p>实验按序列从共同初始化开始，让一次文档的适配不自动污染下一份无关文档。</p></div></article>
+      </div>
+
+      <p>后续研究进一步说明了风险：如果拿随机、无关的长文本片段做 TTT，模型表现可能下降；选择真正与问题有关的证据片段才可能改善表现。这意味着<strong>“学什么”与“怎么学”同样重要</strong>。<a class="cite" href="#ref-selfguided">[6]</a></p>
+
+      <div class="conclusion"><strong>正确理解</strong>TTT-E2E 不是让模型毫无限制地自我修改，而是把可修改范围、学习目标、初始化和更新节奏都提前设计好，让权重更新成为受控的临时记忆机制。</div>
+    </section>
+
+    <section id="paradigm">
+      <div class="section-heading"><div class="number">06</div><h2>为什么 TTT 可能是一种未来范式？</h2></div>
+      <p>它改变的不是一个小功能，而是“模型什么时候学习”的基本假设。</p>
+
+      <div class="spectrum">
+        <div><strong>Context Window</strong><small>把信息放在眼前，模型权重不变；适合精确查看近期内容。</small></div>
+        <div><strong>RAG / 外部记忆</strong><small>需要时查笔记；适合事实、出处和可更新知识库。</small></div>
+        <div><strong>Test-Time Compute</strong><small>固定模型多想几步；增加搜索，但不会把经历写入参数。</small></div>
+        <div><strong>TTT</strong><small>模型在当前任务中真的学习；把上下文压缩进临时权重。</small></div>
+      </div>
+
+      <p>在论文实验中，3B 模型使用标准滑动窗口 Transformer，在 128K 上下文下表现随长度扩展的趋势接近 Full Attention，同时在 H100 上报告了约 2.7× 的推理延迟优势。作者因此把长上下文重新定义为<strong>持续学习问题</strong>，而不只是不断扩大 Attention 窗口的架构问题。<a class="cite" href="#ref-e2e">[3]</a></p>
+
+      <div class="thesis">如果这条路线最终成熟，LLM 可能不再只是“训练好后供人查询的静态知识库”，而会变成“带着一个稳定底座、针对当前经历快速形成临时能力的学习系统”。</div>
+
+      <div class="note"><strong>但这不是 SSI 技术路线的证明。</strong>TTT 与 Ilya Sutskever 公开讨论的部署后学习方向相似，但 SSI 尚未发布技术报告确认采用 TTT。本笔记把 TTT 当作独立研究范式学习，不以传闻作为论据。</div>
+    </section>
+
+    <section id="limits">
+      <div class="section-heading"><div class="number">07</div><h2>距离真正成熟，还缺什么？</h2></div>
+      <div class="cards">
+        <article class="card red"><h3>训练成本</h3><p>Meta-learning 需要 gradients of gradients。当前 8K 实现比标准预训练慢约 3.4×；一个重要原因是现有高速 FlashAttention 接口不能让 Outer loop 穿过 Inner backward 继续求导。<a class="cite" href="#ref-nvidia">[4]</a></p></article>
+        <article class="card red"><h3>推理系统</h3><p>服务用户时不仅要 Forward，还要保存训练激活、Backward、更新权重，并隔离每个会话的动态状态。</p></article>
+        <article class="card red"><h3>安全与数据质量</h3><p>错误、恶意或无关上下文可能产生有害梯度。模型需要决定哪些内容值得学习、哪些必须忽略。</p></article>
+        <article class="card red"><h3>精确记忆</h3><p>把经历压进权重意味着有损压缩。精确数字、原句和出处仍需 Attention、RAG 或外部存储。</p></article>
+        <article class="card red"><h3>长期保留</h3><p>论文重点是单个长序列内的临时学习，不等于已经解决跨用户、跨月份的永久持续学习。</p></article>
+        <article class="card red"><h3>规模验证</h3><p>主要结果最高到 3B 参数、164B 训练 Token 和 128K 上下文，距离今天最大的生产模型仍有距离。</p></article>
+      </div>
+
+      <div class="note"><strong>FlashAttention 是什么？</strong>它是高效计算 Transformer Attention 的底层 GPU 算法与调用接口：通过分块计算，避免把巨大的完整 Attention 矩阵反复写入显存。当前接口支持普通 Forward + Backward，但不能让 Backward 本身再被 Outer loop 求导，因此 TTT-E2E 的 Meta-training 暂时无法完整享受它的加速。</div>
+    </section>
+
+    <section id="product-shape">
+      <div class="section-heading"><div class="number">08</div><h2>一个可能的产品形态：分层学习状态</h2></div>
+      <span class="future-label">以下是基于现有技术的产品推演，不是 TTT-E2E 论文结论</span>
+      <p>如果任务内 TTT 成为成熟能力，产品不太可能为每个用户复制一整套基础模型。更现实的结构是：大家共享同一个稳定 W₀，只保存不同时间尺度的小型状态。</p>
+      <div class="layer-stack" role="img" aria-label="未来系统可能由共享基础模型、组织用户项目适配参数、任务内TTT状态和外部记忆组成">
+        <div class="layer-row"><div class="scope">共享层</div><div><strong>基础模型 W₀</strong></div><div class="state">跨用户的通用语言、推理与生成能力</div></div>
+        <div class="layer-row"><div class="scope">长期个性化</div><div><strong>组织 / 用户 / Project 参数</strong></div><div class="state">可能采用 LoRA、Adapter 或其他小型权重 Delta</div></div>
+        <div class="layer-row"><div class="scope">任务内快速学习</div><div><strong>TTT 动态状态</strong></div><div class="state">当前长任务中不断变化，任务结束后可丢弃或等待巩固</div></div>
+        <div class="layer-row"><div class="scope">精确记忆</div><div><strong>Context / RAG / 文件库</strong></div><div class="state">保存原文、数字、出处和可审计的学习记录</div></div>
+      </div>
+
+      <h3>“千人千模”更可能是千人千增量</h3>
+      <p>组织、用户或 Project 的个性化参数可以作为小型权重文件保存到云端对象存储、企业私有环境或本地设备；请求到达时，系统共享加载一份 W₀，再按身份加载相应增量。热门增量可缓存在 GPU，低频增量留在 CPU、SSD 或对象存储。</p>
+      <div class="process-chart" role="img" aria-label="共享基础模型按请求加载用户或项目参数增量并结合外部记忆完成推理">
+        <div class="process-node"><strong>共享 W₀</strong><small>GPU 中只需一份基础权重</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>加载专属增量</strong><small>组织 / 用户 / Project</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node train"><strong>当前 Session TTT</strong><small>形成任务内动态状态</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node good"><strong>结合外部记忆</strong><small>完成个性化任务</small></div>
+      </div>
+
+      <div class="warning"><strong>参数个性化会带来模型提供商锁定。</strong>无论是 LoRA、普通 Adapter 还是原生权重 Delta，都依赖特定 W₀ 的层结构和内部表示。为 Model A 训练的增量通常不能直接安装到 Model B；即使同一家公司的下一代模型，也可能需要重训或蒸馏。</div>
+
+      <div class="conclusion"><strong>真正可迁移的个人资产，不应只有 Adapter 文件。</strong>更值得长期保存的是产生个性化参数的示范、选择与拒绝记录、Project 文件、记忆和个人评估集。Adapter 更像针对某个 W₀ 的“编译产物”；换基础模型时，可以用这些原始学习记录重新生成新 Adapter。</div>
+    </section>
+
+    <aside class="summary">
+      <h2>真正理解 TTT，只需抓住这八点</h2>
+      <ol>
+        <li>TTT 的目标是让模型从当前测试输入中学习，而不只是在上下文里临时查看它。</li>
+        <li>TTT-E2E 的底层仍是 Transformer，只是把 Full Attention 换成 Sliding-Window Attention。</li>
+        <li>当前文本本身提供下一 Token 标签，模型用 Forward → Loss → Backward 更新动态 MLP。</li>
+        <li>Meta-learning 负责提前训练出一个“经过测试时更新后会变好”的初始模型。</li>
+        <li>LoRA 是低成本更新工具，不是 TTT 本身；有些 TTT 用 LoRA，但最终 TTT-E2E 没用。</li>
+        <li>论文通过局部更新、冻结大部分网络、保留固定 MLP 路径和 mini-batch 降低遗忘风险，但没有绝对保证。</li>
+        <li>TTT 的远景是把 LLM 从静态模型变成受控的、会在使用中形成临时能力的学习系统。</li>
+        <li>未来个性化可能采用“共享 W₀ + 小型参数增量 + Session TTT + 外部记忆”，但参数增量仍绑定特定基础模型。</li>
+      </ol>
+    </aside>
+
+    <footer>
+      <strong>Fact-check 范围</strong>
+      <p>本版重新以 TTT-E2E 原论文和官方代码为主线，完整核查了论文方法章节、架构细节、Meta-learning、LoRA 对比、遗忘保护与后续长上下文 TTT 研究。页面是本地草稿，尚未上传 GitHub Pages。</p>
+      <strong>主要来源</strong>
+      <ul>
+        <li id="ref-foundation"><a href="https://arxiv.org/abs/1909.13231">[1] Sun et al., Test-Time Training with Self-Supervision</a>：现代 TTT 的基本定义，ICML 2020。</li>
+        <li id="ref-layers"><a href="https://arxiv.org/abs/2407.04620">[2] Sun et al., Learning to (Learn at Test Time)</a>：TTT-Linear / TTT-MLP 与“隐藏状态即学习器”。</li>
+        <li id="ref-e2e"><a href="https://arxiv.org/abs/2512.23675">[3] Tandon et al., End-to-End Test-Time Training for Long Context</a>：本笔记的核心论文。</li>
+        <li id="ref-nvidia"><a href="https://developer.nvidia.com/blog/reimagining-llm-memory-using-context-as-training-data-unlocks-models-that-learn-at-test-time/">[4] Yu Sun & Yejin Choi, Reimagining LLM Memory</a>：作者面向工程读者的官方解读与限制。</li>
+        <li id="ref-lora"><a href="https://arxiv.org/abs/2106.09685">[5] Hu et al., LoRA</a>：冻结基础权重、训练低秩增量的原始定义。</li>
+        <li id="ref-selfguided"><a href="https://arxiv.org/abs/2607.09415">[6] Self-Guided Test-Time Training for Long-Context LLMs</a>：训练数据质量与随机片段可能伤害表现。</li>
+        <li><a href="https://github.com/test-time-training/e2e">[7] TTT-E2E 官方 JAX 代码与 checkpoints</a>：实现与复现实验。</li>
+      </ul>
+    </footer>
+  </main>
+</body>
+</html>
