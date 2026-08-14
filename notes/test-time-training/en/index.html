@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Understand Test-Time Training through its purpose, architecture, weight updates, LoRA, knowledge preservation, and open questions.">
+  <title>Test-Time Training: Letting LLMs Keep Learning While They Work</title>
+  <style>
+    :root {
+      --bg:#f5f8fb;--surface:#fff;--surface-alt:#edf4f8;--text:#183247;
+      --muted:#587080;--border:#cfdee7;--primary:#0e7490;--primary-soft:#dff3f7;
+      --orange:#b85f12;--orange-soft:#fff0df;--blue:#315f91;--blue-soft:#e5eef9;
+      --good:#18724b;--good-soft:#e4f5ed;--red:#a23a36;--red-soft:#fde9e7;
+      --shadow:0 12px 32px rgba(29,66,89,.08)
+    }
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+      --bg:#0f1b24;--surface:#172631;--surface-alt:#1d313e;--text:#e3edf2;
+      --muted:#a6bac6;--border:#304754;--primary:#59c4dc;--primary-soft:#163d48;
+      --orange:#f0a253;--orange-soft:#422c19;--blue:#8ab8e8;--blue-soft:#20364d;
+      --good:#72d6aa;--good-soft:#173c30;--red:#f19a94;--red-soft:#482423;--shadow:none
+    }}
+    :root[data-theme="dark"]{
+      --bg:#0f1b24;--surface:#172631;--surface-alt:#1d313e;--text:#e3edf2;
+      --muted:#a6bac6;--border:#304754;--primary:#59c4dc;--primary-soft:#163d48;
+      --orange:#f0a253;--orange-soft:#422c19;--blue:#8ab8e8;--blue-soft:#20364d;
+      --good:#72d6aa;--good-soft:#173c30;--red:#f19a94;--red-soft:#482423;--shadow:none
+    }
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:17px;line-height:1.8}
+    main{width:min(100% - 32px,900px);margin:auto;padding:56px 0 88px}header{display:grid;gap:18px;padding-bottom:36px;border-bottom:1px solid var(--border)}
+    h1,h2,h3,p,ul,ol,blockquote,table{margin:0}h1,h2,h3{text-wrap:balance;line-height:1.35}h1{max-width:820px;font:700 clamp(2.1rem,5vw,3.7rem)/1.16 Georgia,"Times New Roman",serif;letter-spacing:-.035em}h2{font-size:clamp(1.45rem,3vw,1.95rem)}h3{font-size:1.08rem}
+    .eyebrow{color:var(--primary);font:700 .78rem ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase}.lead{max-width:760px;color:var(--muted);font-size:1.08rem}.thesis{padding:18px 20px;border-left:4px solid var(--primary);background:var(--primary-soft);font-weight:650}
+    nav{margin-top:28px;padding:22px 24px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}nav strong{display:block;margin-bottom:10px}nav ol{display:grid;gap:6px;padding-left:22px}a{color:var(--primary);text-underline-offset:4px}nav a{color:var(--text);text-decoration:none}nav a:hover{color:var(--primary)}
+    section{display:grid;gap:20px;padding-top:54px}.section-heading{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start}.number{display:grid;width:34px;height:34px;place-items:center;border:1px solid var(--primary);color:var(--primary);font:700 .82rem ui-monospace,Menlo,monospace}
+    .note,.warning,.conclusion{padding:18px 20px;border:1px solid var(--border);background:var(--surface-alt)}.note strong,.warning strong,.conclusion strong{display:block;margin-bottom:4px}.warning{border-color:var(--orange);background:var(--orange-soft)}.conclusion{border-color:var(--good);background:var(--good-soft)}
+    .process-chart{display:flex;align-items:stretch;width:100%;padding:22px;overflow-x:auto;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.process-node{position:relative;display:grid;flex:1 0 132px;min-height:96px;align-content:center;justify-items:center;gap:5px;padding:14px 12px;border:1px solid var(--border);background:var(--surface-alt);text-align:center}.process-node strong{line-height:1.35}.process-node small{color:var(--muted);line-height:1.4}.process-node.active{border-color:var(--primary);background:var(--primary-soft)}.process-node.train{border-color:var(--orange);background:var(--orange-soft)}.process-node.good{border-color:var(--good);background:var(--good-soft)}
+    .process-arrow{position:relative;flex:0 0 44px;min-width:44px}.process-arrow::before{content:"";position:absolute;top:50%;left:5px;right:8px;height:2px;background:var(--border);transform:translateY(-50%)}.process-arrow::after{content:"";position:absolute;top:50%;right:5px;width:9px;height:9px;border-top:2px solid var(--primary);border-right:2px solid var(--primary);transform:translateY(-50%) rotate(45deg)}.process-arrow span{position:absolute;top:calc(50% - 4px);left:5px;width:8px;height:8px;border-radius:50%;background:var(--primary);animation:travel 2.2s ease-in-out infinite}
+    @keyframes travel{from{transform:translateX(0);opacity:.15}50%{opacity:1}to{transform:translateX(26px);opacity:.15}}
+    .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.component-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.card{display:grid;align-content:start;gap:10px;padding:20px;border-top:4px solid var(--primary);background:var(--surface);box-shadow:var(--shadow)}.card p{color:var(--muted);font-size:.94rem}.card.orange{border-color:var(--orange)}.card.blue{border-color:var(--blue)}.card.good{border-color:var(--good)}.card.red{border-color:var(--red)}
+    .problem-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.problem{padding:18px;border:1px solid var(--border);background:var(--surface)}.problem .label{display:block;margin-bottom:8px;color:var(--primary);font:700 .76rem ui-monospace,Menlo,monospace;letter-spacing:.08em}.problem p{color:var(--muted);font-size:.93rem}
+    .architecture{display:grid;gap:18px;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.arch-group{display:grid;grid-template-columns:155px 1fr;gap:14px;align-items:stretch}.arch-label{display:grid;place-items:center;padding:14px;border:1px solid var(--border);background:var(--surface-alt);font-weight:700;text-align:center}.block-stack{display:grid;gap:8px}.module{position:relative;display:grid;place-items:center;min-height:62px;padding:12px;border:1px solid var(--border);background:var(--surface-alt);text-align:center}.module:not(:last-child)::after{content:"↓";position:absolute;bottom:-18px;z-index:2;color:var(--primary);font-weight:800}.module small{display:block;color:var(--muted)}.module.frozen{border-color:var(--blue);background:var(--blue-soft)}.module.dynamic{border-color:var(--orange);background:var(--orange-soft)}.module.safe{border-color:var(--good);background:var(--good-soft)}.legend{display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:.86rem}.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{display:inline-block;width:12px;height:12px;border:2px solid var(--border)}.legend .f{border-color:var(--blue);background:var(--blue-soft)}.legend .d{border-color:var(--orange);background:var(--orange-soft)}.legend .s{border-color:var(--good);background:var(--good-soft)}
+    .loop-chart{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:28px;padding:26px 22px 46px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.loop-chart .process-node:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-22px;color:var(--primary);font-size:1.25rem;transform:translate(50%,-50%)}.loop-back{grid-column:1/-1;position:relative;height:2px;margin:-8px 7% 0;background:var(--primary)}.loop-back::before{content:"";position:absolute;left:-1px;top:-4px;width:8px;height:8px;border-left:2px solid var(--primary);border-bottom:2px solid var(--primary);transform:rotate(45deg)}.loop-back::after{content:"Continue reading the next token batch";position:absolute;left:50%;top:8px;padding:0 8px;background:var(--surface);color:var(--muted);font-size:.8rem;transform:translateX(-50%)}
+    .two-loop{display:grid;gap:18px;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.loop-box{display:grid;gap:12px;padding:18px;border:1px solid var(--border)}.loop-box.inner{border-left:4px solid var(--orange);background:var(--orange-soft)}.loop-box.outer{border-left:4px solid var(--primary);background:var(--primary-soft)}.mini-flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.mini-flow span{padding:7px 10px;border:1px solid var(--border);background:var(--surface);font-size:.9rem}.mini-flow b{color:var(--primary)}
+    .model-map{display:grid;gap:0;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.map-node{display:grid;place-items:center;min-height:64px;padding:12px 16px;border:1px solid var(--border);background:var(--surface-alt);text-align:center}.map-node.input,.map-node.output{border-color:var(--primary);background:var(--primary-soft);font-weight:700}.map-arrow{display:grid;height:34px;place-items:center;color:var(--primary);font-size:1.3rem;font-weight:800}.map-block{display:grid;gap:8px;padding:16px;border:1px solid var(--blue);background:var(--blue-soft)}.map-block>strong{text-align:center}.map-parts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.map-part{padding:10px;border:1px solid var(--border);background:var(--surface);text-align:center}.map-dots{text-align:center;color:var(--muted);font-size:1.5rem;letter-spacing:.25em}
+    .meta-tree{display:grid;grid-template-columns:180px 1fr;gap:18px;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.meta-root{display:grid;place-items:center;padding:18px;border:1px solid var(--primary);background:var(--primary-soft);text-align:center}.meta-branches{display:grid;gap:10px}.meta-branch{position:relative;display:grid;grid-template-columns:180px 1fr;gap:10px;align-items:center;padding-left:24px}.meta-branch::before{content:"";position:absolute;left:0;top:50%;width:18px;height:1px;background:var(--primary)}.meta-branch::after{content:"";position:absolute;left:0;top:-6px;bottom:-6px;width:1px;background:var(--border)}.meta-branch:first-child::after{top:50%}.meta-branch:last-child::after{bottom:50%}.meta-name{padding:12px;border:1px solid var(--orange);background:var(--orange-soft);font-weight:700}.meta-steps{padding:12px;border:1px solid var(--border);background:var(--surface-alt);font:600 .88rem ui-monospace,Menlo,monospace}.block-flow{display:grid;gap:10px;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.block-end{padding:13px 16px;border:1px solid var(--primary);background:var(--primary-soft);font-weight:700;text-align:center}.stage-arrow{display:grid;height:24px;place-items:center;color:var(--primary);font-size:1.25rem;font-weight:800}.residual-unit{display:grid;grid-template-columns:minmax(0,1fr) 118px;grid-template-areas:"main skip" "merge merge";gap:0 14px}.unit-main{grid-area:main;display:grid;grid-template-columns:54px 1fr;gap:12px;align-items:center}.stage-tag{display:grid;width:44px;height:44px;place-items:center;border-radius:50%;font:700 .75rem ui-monospace,Menlo,monospace}.stage-tag.frozen{color:var(--blue);background:var(--blue-soft);border:1px solid var(--blue)}.stage-tag.dynamic{color:var(--orange);background:var(--orange-soft);border:1px solid var(--orange)}.stage-tag.safe{color:var(--good);background:var(--good-soft);border:1px solid var(--good)}.stage-box{display:grid;gap:3px;min-height:76px;align-content:center;padding:14px 16px;border:1px solid var(--border);background:var(--surface-alt)}.stage-box small{color:var(--muted)}.skip-path{grid-area:skip;position:relative;display:grid;place-items:center;color:var(--muted);font-size:.78rem;text-align:center}.skip-path::before{content:"";position:absolute;inset:8px 50% -14px 0;border-top:2px solid var(--primary);border-right:2px solid var(--primary);border-bottom:2px solid var(--primary);border-radius:0 12px 12px 0}.skip-path span{position:relative;z-index:1;padding:3px 6px;background:var(--surface)}.merge{grid-area:merge;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;margin-top:8px;color:var(--primary);font-size:.86rem;font-weight:700}.merge::before{content:"＋";display:grid;width:26px;height:26px;place-items:center;margin-left:calc(50% - 13px);border:2px solid var(--primary);border-radius:50%;background:var(--surface)}
+    .table-wrap{overflow-x:auto;border:1px solid var(--border)}table{width:100%;min-width:700px;border-collapse:collapse;background:var(--surface);font-size:.94rem}th,td{padding:14px 16px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}th{background:var(--surface-alt);font-size:.86rem}tr:last-child td{border-bottom:0}.cite{font-size:.78em;font-weight:700;text-decoration:none;vertical-align:super}
+    .guardrails{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.guard{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:18px;border:1px solid var(--border);background:var(--surface)}.guard .icon{display:grid;width:34px;height:34px;place-items:center;border-radius:50%;background:var(--good-soft);color:var(--good);font-weight:800}.guard p{color:var(--muted);font-size:.92rem}
+    .spectrum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;padding:20px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.spectrum>div{display:grid;gap:7px;padding:16px;border-right:1px solid var(--border)}.spectrum>div:last-child{border-right:0}.spectrum small{color:var(--muted)}.layer-stack{display:grid;gap:10px;padding:22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.layer-row{display:grid;grid-template-columns:130px 1fr 1.2fr;gap:10px;align-items:stretch}.layer-row>div{display:grid;align-content:center;padding:12px 14px;border:1px solid var(--border);background:var(--surface-alt)}.layer-row .scope{font-weight:700;color:var(--primary)}.layer-row .state{color:var(--muted);font-size:.9rem}.future-label{display:inline-flex;width:max-content;padding:4px 9px;border:1px solid var(--orange);background:var(--orange-soft);color:var(--orange);font-size:.78rem;font-weight:700;letter-spacing:.04em}
+    .summary{display:grid;gap:16px;margin-top:56px;padding:28px;border:1px solid var(--primary);background:var(--primary-soft)}.summary ol{display:grid;gap:8px;padding-left:22px}footer{display:grid;gap:14px;margin-top:52px;padding-top:28px;border-top:1px solid var(--border);color:var(--muted);font-size:.9rem}footer ul{display:grid;gap:7px;padding-left:22px}
+    @media(max-width:740px){main{width:min(100% - 24px,900px);padding-top:38px}.section-heading{grid-template-columns:1fr}.cards,.component-cards,.problem-grid,.guardrails,.spectrum{grid-template-columns:1fr}.component-cards{margin-inline:0}.spectrum>div{border-right:0;border-bottom:1px solid var(--border)}.spectrum>div:last-child{border-bottom:0}.process-chart{flex-direction:column;overflow:visible}.process-arrow{flex-basis:36px;min-width:0;min-height:36px}.process-arrow::before{top:4px;bottom:8px;left:50%;right:auto;width:2px;height:auto;transform:translateX(-50%)}.process-arrow::after{top:auto;right:auto;bottom:5px;left:50%;transform:translateX(-50%) rotate(135deg)}.process-arrow span{top:4px;left:calc(50% - 4px);animation-name:travel-down}.loop-chart{grid-template-columns:1fr;gap:30px;padding-bottom:52px}.loop-chart .process-node:not(:last-child)::after{top:auto;right:50%;bottom:-27px;transform:translate(50%,0) rotate(90deg)}.loop-back{grid-column:1;margin-inline:12%}.arch-group{grid-template-columns:1fr}.map-parts{grid-template-columns:1fr}.meta-tree{grid-template-columns:1fr}.meta-branch{grid-template-columns:1fr;padding:0}.meta-branch::before,.meta-branch::after{display:none}.layer-row{grid-template-columns:1fr}.residual-unit{grid-template-columns:1fr;grid-template-areas:"main" "skip" "merge";gap:8px}.skip-path{min-height:32px}.skip-path::before{inset:50% 12% auto 12%;border-right:0;border-bottom:0;border-radius:0}.merge{grid-template-columns:1fr;text-align:center}.merge::before{margin:auto}}
+    @keyframes travel-down{from{transform:translateY(0);opacity:.15}50%{opacity:1}to{transform:translateY(22px);opacity:.15}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.process-arrow span{animation:none}}
+  </style>
+</head>
+<body>
+  <main>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;font-size:.9rem"><a href="../" hreflang="zh-CN">Chinese</a>&nbsp;·&nbsp;<strong>English</strong></div>
+    <header>
+      <div class="eyebrow">Fact-checked Learning Notes · Test-Time Training</div>
+      <h1>Test-Time Training: Letting LLMs Keep Learning While They Work</h1>
+      <p class="lead">The point is not to chase rumors about SSI, but to understand TTT as a research direction that could change the shape of LLMs: why it exists, whether it still uses Transformers, how context is written into weights, and how the model can avoid getting worse as it learns.</p>
+      <div class="thesis">Core intuition:<strong>Today’s LLMs treat context as temporary scratch space. TTT turns current experience into a small training process so useful information can enter temporary weights.</strong></div>
+    </header>
+
+    <nav aria-label="Contents">
+      <strong>Contents</strong>
+      <ol>
+        <li><a href="#purpose">What problem is TTT trying to solve?</a></li>
+        <li><a href="#architecture">Does it still use a Transformer?</a></li>
+        <li><a href="#mechanism">Inner and outer loops: learning on the spot and meta-learning</a></li>
+        <li><a href="#lora">How are TTT and LoRA related?</a></li>
+        <li><a href="#safety">How can the model avoid getting worse after updates?</a></li>
+        <li><a href="#paradigm">Why could TTT become a future paradigm?</a></li>
+        <li><a href="#limits">What is still missing before TTT is mature?</a></li>
+        <li><a href="#product-shape">A possible product form: layered learning state</a></li>
+      </ol>
+    </nav>
+
+    <section id="purpose">
+      <div class="section-heading"><div class="number">01</div><h2>What problem is TTT trying to solve?</h2></div>
+      <p>The dominant LLM paradigm is to train a fixed set of weights on enormous datasets, then perform only forward computation (inference) after deployment. No matter how long a document the user provides, its information normally remains in the current context or KV cache rather than becoming a new model capability.</p>
+
+      <div class="problem-grid">
+        <article class="problem">
+          <span class="label">Problem A · Context cost</span>
+          <h3>Full attention gets slower as the context grows</h3>
+          <p>To generate each new token, full attention must inspect an ever-growing history of keys and values. The longer the context, the higher the cost of each new token.</p>
+        </article>
+        <article class="problem">
+          <span class="label">Problem B · Sliding-window forgetting</span>
+          <h3>A fixed window is fast, but older content falls out</h3>
+          <p>Sliding-window attention sees only the most recent span, keeping its cost stable. The tradeoff is that tokens outside the window are no longer visible.</p>
+        </article>
+        <article class="problem">
+          <span class="label">Problem C · The model does not learn on the spot</span>
+          <h3>Seeing is not the same as learning</h3>
+          <p>Ordinary inference can temporarily reference a long document, but the model weights do not change from that experience when the conversation ends.</p>
+        </article>
+      </div>
+
+      <p>TTT-E2E proposes another way to handle long context: keep a cheap sliding window for recent content while using <strong>next-token prediction</strong> to keep training the model at test time, compressing information that is about to leave the window into temporary weights.<a class="cite" href="#ref-e2e">[3]</a></p>
+
+      <div class="process-chart" role="img" aria-label="The sliding window handles recent content while TTT compresses information leaving the window into temporary weights.">
+        <div class="process-node"><strong>A long sequence streams in</strong><small>Documents, code, or history</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>Sliding window</strong><small>Directly inspect recent tokens</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node train"><strong>TTT gradient update</strong><small>Learn from the current window</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node good"><strong>Temporary weight memory</strong><small>Retain predictive patterns</small></div>
+      </div>
+
+      <div class="warning"><strong>“Compression” is not verbatim storage.</strong> Weights are more like the understanding formed after reading a book than the original pages that can be revisited exactly. Full attention, RAG, or external storage still matters for exact quotations, numbers, and provenance.</div>
+    </section>
+
+    <section id="architecture">
+      <div class="section-heading"><div class="number">02</div><h2>Does it still use a Transformer?</h2></div>
+      <div class="conclusion"><strong>Answer: yes, in the 2025 TTT-E2E paper.</strong> It keeps the basic Transformer backbone, replaces full attention with sliding-window attention, and allows some MLPs in the final quarter of the blocks to update at test time.<a class="cite" href="#ref-e2e">[3]</a></div>
+
+      <h3>First, a simplified Transformer</h3>
+      <div class="model-map" role="img" aria-label="Text tokens pass through embedding and multiple Transformer blocks containing attention, normalization, and MLPs before the model predicts the next token.">
+        <div class="map-node input">Text tokens</div>
+        <div class="map-arrow" aria-hidden="true">↓</div>
+        <div class="map-node"><strong>Embedding</strong><small>Text → numeric vectors</small></div>
+        <div class="map-arrow" aria-hidden="true">↓</div>
+        <div class="map-block">
+          <strong>Transformer Block 1</strong>
+          <div class="map-parts"><div class="map-part">Attention</div><div class="map-part">Normalization</div><div class="map-part">MLP</div></div>
+        </div>
+        <div class="map-arrow" aria-hidden="true">↓</div>
+        <div class="map-block">
+          <strong>Transformer Block 2</strong>
+          <div class="map-parts"><div class="map-part">Attention</div><div class="map-part">Normalization</div><div class="map-part">MLP</div></div>
+        </div>
+        <div class="map-dots" aria-hidden="true">···</div>
+        <div class="map-arrow" aria-hidden="true">↓</div>
+        <div class="map-node output">Predict the next token</div>
+      </div>
+
+      <h3>The four basic Transformer components</h3>
+      <div class="cards component-cards">
+        <article class="card"><h3>Embedding · Translator</h3><p>Turns text tokens into numeric vectors the model can compute with. It defines the model’s basic language coordinate system.</p></article>
+        <article class="card blue"><h3>Attention · Retrieval mechanism</h3><p>Decides which earlier tokens the current token should read from. Here it only inspects the recent sliding window.</p></article>
+        <article class="card"><h3>Normalization · Stabilizer</h3><p>Keeps values at a stable scale across layers so signals do not explode or vanish through the network.</p></article>
+        <article class="card orange"><h3>MLP · Processor</h3><p>After attention finds information, the MLP further processes each token’s internal representation. It contains a large amount of writable capacity.</p></article>
+      </div>
+
+      <h3>The actual hierarchy in TTT-E2E</h3>
+      <div class="architecture" role="img" aria-label="In TTT-E2E, input passes through frozen embedding and the frozen first three quarters of blocks, then through final-quarter blocks with frozen attention, a dynamic MLP, and a static MLP.">
+        <div class="arch-group">
+          <div class="arch-label">Model input</div>
+          <div class="block-stack">
+            <div class="module frozen"><strong>Embedding</strong><small>Frozen: convert tokens to vectors</small></div>
+          </div>
+        </div>
+        <div class="arch-group">
+          <div class="arch-label">First 3/4 of blocks<br>Fully frozen</div>
+          <div class="block-stack">
+            <div class="module frozen"><strong>Sliding-window attention + norm</strong><small>Read recent context without weight updates</small></div>
+            <div class="module frozen"><strong>Standard MLP + norm</strong><small>Continue providing stable pre-trained capabilities</small></div>
+          </div>
+        </div>
+        <div class="arch-group">
+          <div class="arch-label">Final 1/4 of blocks<br>Locally plastic</div>
+          <div class="block-stack">
+            <div class="module frozen"><strong>Sliding-window attention + norm</strong><small>Still frozen</small></div>
+            <div class="module dynamic"><strong>Dynamic MLP / Prime MLP</strong><small>Updated at test time: write current context</small></div>
+            <div class="module safe"><strong>Static standard MLP</strong><small>Frozen at test time: preserve a stable computation path</small></div>
+          </div>
+        </div>
+        <div class="legend"><span><i class="f"></i>Frozen components</span><span><i class="d"></i>Updated at test time</span><span><i class="s"></i>Fixed knowledge-preservation path</span></div>
+      </div>
+
+      <div class="note"><strong>What does the static MLP actually guarantee?</strong> It only guarantees that its own parameters are not overwritten by the inner-loop optimizer: W<sub>static,new</sub> = W<sub>static,old</sub>. It learns together with the whole model during meta-training and remains a fixed computation path at test time. It is not a complete backup of all knowledge, nor a mathematical guarantee that dynamic updates can never hurt performance.</div>
+
+      <div class="note"><strong>The dynamic and static MLPs are not independent parallel backups.</strong> According to the official code, each final-quarter block passes through the dynamic MLP and then the static standard MLP. Because the dynamic MLP changes the intermediate representation, it indirectly affects the static MLP’s actual input and output.</div>
+
+      <div class="note"><strong>What is a residual connection?</strong> Both dynamic and static MLPs use residual connections: instead of replacing the input completely, the module learns a modification that is added to the original input, namely <strong>output = original input + module result</strong>. Even if the learned modification is imperfect, the original input retains a direct path.</div>
+
+      <h3>Why update only the final quarter of blocks?</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Updated range</th><th>Observation in the paper</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>Final layer or final 1/8</td><td>Insufficient long-context scaling</td><td>Too few writable dynamic weights; insufficient temporary memory capacity</td></tr>
+            <tr><td>Final 1/4</td><td>Scales well with context length</td><td>A sweet spot between capacity and backward-pass cost</td></tr>
+            <tr><td>Final 1/2</td><td>Performance is similar to the final 1/4</td><td>Updating more layers adds little benefit but requires a longer backward path</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Thus, “the final quarter” is not a universal law. It is the tradeoff found by ablation for the models and context lengths in this paper. Embedding, normalization, and attention remain frozen because including them in the inner loop made the outer loop unstable.<a class="cite" href="#ref-e2e">[3]</a></p>
+
+      <div class="note"><strong>Do not collapse different TTT papers into one architecture.</strong> The 2024 TTT-Linear/TTT-MLP work turns the hidden state into a small learner. The 2025 TTT-E2E work keeps a sliding-window Transformer and directly updates some of its standard MLPs. They share the test-time-learning principle but use different structures.<a class="cite" href="#ref-layers">[2]</a></div>
+    </section>
+
+    <section id="mechanism">
+      <div class="section-heading"><div class="number">03</div><h2>Inner and outer loops: learning on the spot and meta-learning</h2></div>
+      <p>First see how the two loops relate, then examine each one.</p>
+
+      <div class="meta-tree" role="img" aria-label="The outer loop—meta-learning—improves the shared initial W0 by observing independent inner-loop learning on Documents A, B, and C.">
+        <div class="meta-root"><strong>Outer loop</strong><span>Choose and improve the shared starting point W₀</span></div>
+        <div class="meta-branches">
+          <div class="meta-branch"><div class="meta-name">Inner loop · Document A</div><div class="meta-steps">W₀ → W₁ᴬ → W₂ᴬ</div></div>
+          <div class="meta-branch"><div class="meta-name">Inner loop · Document B</div><div class="meta-steps">W₀ → W₁ᴮ → W₂ᴮ</div></div>
+          <div class="meta-branch"><div class="meta-name">Inner loop · Document C</div><div class="meta-steps">W₀ → W₁ᶜ → W₂ᶜ</div></div>
+        </div>
+      </div>
+
+      <div class="two-loop">
+        <div class="loop-box inner"><h3>What does the inner loop do?</h3><p>Learn within one document, answering: “How should my dynamic weights change for this document?”</p></div>
+        <div class="loop-box outer"><h3>What does the outer loop do?</h3><p>Compare outcomes after inner-loop learning across many documents and improve the shared W₀ so it learns new documents more effectively.</p></div>
+      </div>
+
+      <div class="conclusion"><strong>The outer loop is the meta-learning process described here.</strong> It does not learn one document during deployment. During model development, it observes the results of many inner loops and improves the initial W₀ shared across documents.</div>
+
+      <div class="note"><strong>The two loops operate at different stages.</strong> During development, the outer loop repeatedly simulates many inner loops. After deployment, the trained W₀ is used to run only the inner loop on the current document. Document A’s temporary W₂ᴬ is not directly carried into an unrelated document B.</div>
+
+      <h3>Inner loop: how does the model read and update weights at the same time?</h3>
+      <p>A provided text naturally contains its own targets: preceding tokens are the input and the actual next token is the label, so no human annotation is required.</p>
+
+      <div class="loop-chart" role="img" aria-label="TTT predicts a token batch, computes next-token loss, backpropagates, updates the dynamic MLP, and continues to the next batch.">
+        <div class="process-node active"><strong>Read a batch of tokens</strong><small>The window contains real text</small></div>
+        <div class="process-node"><strong>Forward</strong><small>Predict each next token</small></div>
+        <div class="process-node train"><strong>Loss + backward pass</strong><small>Compute error and gradients</small></div>
+        <div class="process-node good"><strong>Update the dynamic MLP</strong><small>Write information into temporary weights</small></div>
+        <div class="loop-back" aria-hidden="true"></div>
+      </div>
+
+      <ol>
+        <li><strong>Forward:</strong> The model reads the batch with its current weights and predicts each next token.</li>
+        <li><strong>Loss:</strong> Compare predictions with actual tokens to obtain cross-entropy loss.</li>
+        <li><strong>Backward:</strong> Compute which dynamic-MLP weights contributed to prediction errors and in which direction they should change.</li>
+        <li><strong>Optimizer step:</strong> Use the gradients to update the dynamic MLP into a state better adapted to the current document.</li>
+        <li><strong>Next batch:</strong> The model uses the new state to process subsequent tokens.</li>
+      </ol>
+
+      <h3>Why does the outer loop need “gradients of gradients”?</h3>
+      <p>Ordinary pre-training only optimizes whether fixed weights predict well; it does not optimize whether the model improves after several inner-loop updates. The outer loss evaluates the updated W₁ and W₂, then traces back to the initial W₀. Exact backpropagation must therefore pass through the inner-loop gradient operations—effectively <strong>taking a gradient of a gradient</strong>. First-order approximations can also omit some second-order terms.<a class="cite" href="#ref-e2e">[3]</a></p>
+
+      <div class="conclusion"><strong>In one sentence</strong> The inner loop learns the current document; the outer loop (meta-learning) learns in advance how to learn better from documents.</div>
+    </section>
+
+    <section id="lora">
+      <div class="section-heading"><div class="number">04</div><h2>How are TTT and LoRA related?</h2></div>
+      <h3>First, understand LoRA</h3>
+      <p>Full fine-tuning directly changes a large number of the model’s original weights, making training and storage expensive. <strong>LoRA (Low-Rank Adaptation)</strong> freezes the original weights W, trains only two small matrices A and B, and adds their update to the original computation.</p>
+      <div class="process-chart" role="img" aria-label="LoRA freezes the original model weights, trains small low-rank matrices A and B, and adds their update to the base-model computation.">
+        <div class="process-node"><strong>Base weights W</strong><small>Frozen; not directly modified</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>Small LoRA matrices A × B</strong><small>Train only a small number of parameters</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node good"><strong>W + ΔW</strong><small>Base capability + task adaptation</small></div>
+      </div>
+      <div class="note"><strong>Why “low-rank”?</strong> Instead of training one enormous ΔW directly, LoRA approximates it as the product of two narrow matrices. This greatly reduces the parameters that must be trained and stored.</div>
+
+      <p>With LoRA defined, their roles are clearer: TTT determines <strong>when learning happens and which data it uses</strong>; LoRA is merely one <strong>low-cost tool for modifying parameters</strong>.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>Question it answers</th><th>Core approach</th></tr></thead>
+          <tbody>
+            <tr><td><strong>TTT</strong></td><td>When and why should learning happen?</td><td>Learn from current data at test or use time to adapt the model to the current instance</td></tr>
+            <tr><td><strong>LoRA</strong></td><td>How can an update use fewer parameters?</td><td>Freeze original weights and train only additional low-rank matrices</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Therefore, TTT <strong>can use LoRA, but does not have to</strong>. Work such as ARC TTT, qTTT, and Self-Guided TTT uses LoRA to reduce the cost of per-instance adaptation: base weights remain fixed while a small temporary update is stored.<a class="cite" href="#ref-lora">[5]</a></p>
+
+      <div class="warning"><strong>The final TTT-E2E design is not LoRA-based TTT.</strong> The TTT-KVB comparison used multi-head MLPs with LoRA. Final TTT-E2E found that because backpropagation itself is already expensive, updating larger standard MLPs in only the final quarter of blocks is more effective than updating many tiny LoRA states. This provides greater memory capacity while shortening the network path traversed by backpropagation.<a class="cite" href="#ref-e2e">[3]</a></div>
+
+      <div class="cards">
+        <article class="card blue"><h3>LoRA approach</h3><p>The base model is fully frozen and temporary memory lives in small low-rank updates. It is cheap and easy to isolate, but has limited writable capacity.</p></article>
+        <article class="card orange"><h3>TTT-E2E approach</h3><p>Directly update a few larger native MLPs. Each update is more expensive, but the dynamic state has greater capacity.</p></article>
+        <article class="card good"><h3>Shared goal</h3><p>Restrict the plastic region so the entire model cannot drift arbitrarily on one test input.</p></article>
+      </div>
+
+      <h3>Parameter adaptation is broader than LoRA</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Adaptation method</th><th>What is stored</th><th>Characteristics</th></tr></thead>
+          <tbody>
+            <tr><td>LoRA</td><td>Two low-rank update matrices</td><td>Compact and easy to load; one of the most common parameter-efficient adaptation methods</td></tr>
+            <tr><td>Inserted adapter</td><td>A small neural-network module inserted into the Transformer</td><td>Base weights stay frozen while the extra module modifies behavior</td></tr>
+            <tr><td>Native-weight delta</td><td>Differences between selected native weights and W₀</td><td>Avoids storing a full model, but the delta may be large and harder to serve efficiently</td></tr>
+            <tr><td>Directly update selected native weights</td><td>Updated MLP or other parameter state</td><td>Greater writable capacity; TTT-E2E’s dynamic MLP follows this approach</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><strong>Shared point</strong> None of these parameter files is an independent model. They describe how to modify a particular W₀, so they must record compatibility information such as the base-model version, architecture, target layers, and tokenizer.</div>
+    </section>
+
+    <section id="safety">
+      <div class="section-heading"><div class="number">05</div><h2>How can an LLM avoid getting worse after its weights change?</h2></div>
+      <div class="warning"><strong>The honest answer: there is no absolute guarantee today.</strong> A central challenge in TTT is the plasticity–stability tradeoff: the model must learn from new context without destroying its pre-trained capabilities. The paper uses several safeguards to reduce the risk, but this remains an open research problem.</div>
+
+      <div class="guardrails">
+        <article class="guard"><div class="icon">1</div><div><h3>Prepare with meta-learning</h3><p>The objective directly evaluates performance after TTT instead of assuming any gradient update will help.</p></div></article>
+        <article class="guard"><div class="icon">2</div><div><h3>Update only MLPs</h3><p>Embedding, normalization, and attention remain frozen; the paper found that updating them caused training instability.</p></div></article>
+        <article class="guard"><div class="icon">3</div><div><h3>Open only the final quarter of blocks</h3><p>Limit the editable region while retaining enough context-compression capacity in the experiments.</p></div></article>
+        <article class="guard"><div class="icon">4</div><div><h3>Keep a static standard MLP</h3><p>It learns stable capabilities with the model during meta-training and remains frozen at test time. It provides a fixed computation path, not a complete knowledge backup or a guarantee against harm from dynamic changes.</p></div></article>
+        <article class="guard"><div class="icon">5</div><div><h3>Update by mini-batch</h3><p>Aggregate gradients over roughly 1K tokens instead of stepping after every token, improving parallelism and reducing accidental gradient explosions.</p></div></article>
+        <article class="guard"><div class="icon">6</div><div><h3>Treat updates as session state</h3><p>Each sequence starts from a shared initialization so adaptation to one document does not automatically contaminate an unrelated document.</p></div></article>
+      </div>
+
+      <p>Later work further demonstrates the risk: TTT on random, irrelevant spans of long text can reduce performance, while selecting evidence relevant to the question can improve it. This means that <strong>what the model learns is as important as how it learns</strong>.<a class="cite" href="#ref-selfguided">[6]</a></p>
+
+      <div class="conclusion"><strong>Correct interpretation</strong> TTT-E2E does not allow unrestricted self-modification. It predefines the editable region, learning objective, initialization, and update cadence so weight updates function as controlled temporary memory.</div>
+    </section>
+
+    <section id="paradigm">
+      <div class="section-heading"><div class="number">06</div><h2>Why could TTT become a future paradigm?</h2></div>
+      <p>It changes not a small feature, but the basic assumption of when a model learns.</p>
+
+      <div class="spectrum">
+        <div><strong>Context window</strong><small>Keep information in view without changing weights; good for exact access to recent content.</small></div>
+        <div><strong>RAG / external memory</strong><small>Look up notes when needed; good for facts, provenance, and updatable knowledge bases.</small></div>
+        <div><strong>Test-time compute</strong><small>Let a fixed model think for more steps; increases search without writing experience into parameters.</small></div>
+        <div><strong>TTT</strong><small>The model genuinely learns within the current task, compressing context into temporary weights.</small></div>
+      </div>
+
+      <p>In the paper’s experiments, a 3B model using a standard sliding-window Transformer showed context-length scaling similar to full attention and reported about 2.7× lower inference latency at 128K context on an H100. The authors therefore reframe long context as a <strong>continual-learning problem</strong>, not merely an architecture problem of expanding attention windows.<a class="cite" href="#ref-e2e">[3]</a></p>
+
+      <div class="thesis">If this direction matures, LLMs may become more than static knowledge bases queried after training. They could become learning systems with a stable foundation and the ability to form temporary capabilities quickly from current experience.</div>
+
+      <div class="note"><strong>This is not evidence of SSI’s technical approach.</strong> TTT resembles Ilya Sutskever’s public discussion of learning after deployment, but SSI has not released a technical report confirming TTT. This note studies TTT as an independent research paradigm and does not use rumors as evidence.</div>
+    </section>
+
+    <section id="limits">
+      <div class="section-heading"><div class="number">07</div><h2>What is still missing before TTT is mature?</h2></div>
+      <div class="cards">
+        <article class="card red"><h3>Training cost</h3><p>Meta-learning requires gradients of gradients. The current 8K implementation is about 3.4× slower than standard pre-training; one major reason is that today’s optimized FlashAttention interface cannot differentiate the outer loop through the inner backward pass.<a class="cite" href="#ref-nvidia">[4]</a></p></article>
+        <article class="card red"><h3>Inference systems</h3><p>Serving requires more than a forward pass: the system must retain training activations, run backward passes, update weights, and isolate dynamic state for each session.</p></article>
+        <article class="card red"><h3>Safety and data quality</h3><p>Incorrect, malicious, or irrelevant context can create harmful gradients. The model must decide what is worth learning and what must be ignored.</p></article>
+        <article class="card red"><h3>Exact memory</h3><p>Compressing experience into weights is lossy. Exact numbers, quotations, and provenance still require attention, RAG, or external storage.</p></article>
+        <article class="card red"><h3>Long-term retention</h3><p>The paper focuses on temporary learning within one long sequence, not permanent continual learning across users and months.</p></article>
+        <article class="card red"><h3>Validation at scale</h3><p>The main results reach 3B parameters, 164B training tokens, and 128K context—still far from the largest production models.</p></article>
+      </div>
+
+      <div class="note"><strong>What is FlashAttention?</strong> It is a low-level GPU algorithm and API for efficient Transformer attention. By computing in tiles, it avoids repeatedly writing the full, enormous attention matrix to GPU memory. The current interface supports ordinary forward and backward passes, but the outer loop cannot differentiate through that backward pass, so TTT-E2E meta-training cannot yet fully benefit from its acceleration.</div>
+    </section>
+
+    <section id="product-shape">
+      <div class="section-heading"><div class="number">08</div><h2>A possible product form: layered learning state</h2></div>
+      <span class="future-label">The following is a product-level inference from existing technology, not a conclusion of the TTT-E2E paper</span>
+      <p>If within-task TTT becomes mature, products are unlikely to copy a complete base model for every user. A more realistic structure is a shared stable W₀ plus smaller states at different timescales.</p>
+      <div class="layer-stack" role="img" aria-label="A future system may combine a shared base model, organization/user/project adaptation parameters, within-task TTT state, and external memory.">
+        <div class="layer-row"><div class="scope">Shared layer</div><div><strong>Base model W₀</strong></div><div class="state">General language, reasoning, and generation capabilities shared across users</div></div>
+        <div class="layer-row"><div class="scope">Long-term personalization</div><div><strong>Organization / user / project parameters</strong></div><div class="state">May use LoRA, adapters, or other small weight deltas</div></div>
+        <div class="layer-row"><div class="scope">Fast learning within a task</div><div><strong>TTT dynamic state</strong></div><div class="state">Changes throughout the current long task; may be discarded or consolidated afterward</div></div>
+        <div class="layer-row"><div class="scope">Exact memory</div><div><strong>Context / RAG / file store</strong></div><div class="state">Preserve source text, numbers, provenance, and auditable learning records</div></div>
+      </div>
+
+      <h3>“A model for every user” is more likely to mean an update for every user</h3>
+      <p>Personalization parameters for an organization, user, or project can be stored as small weight files in cloud object storage, a private enterprise environment, or a local device. When a request arrives, the system shares one loaded W₀ and loads the corresponding update by identity. Hot updates can be cached on GPU, while infrequent ones remain in CPU memory, SSD, or object storage.</p>
+      <div class="process-chart" role="img" aria-label="A shared base model loads user- or project-specific parameter updates on demand and combines them with external memory for inference.">
+        <div class="process-node"><strong>Shared W₀</strong><small>Only one copy of base weights on GPU</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>Load a dedicated update</strong><small>Organization / user / project</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node train"><strong>Current-session TTT</strong><small>Form dynamic state within the task</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node good"><strong>Combine with external memory</strong><small>Complete the personalized task</small></div>
+      </div>
+
+      <div class="warning"><strong>Parameter personalization creates model-provider lock-in.</strong> LoRA, inserted adapters, and native-weight deltas all depend on a particular W₀’s layer structure and internal representations. An update trained for Model A usually cannot be installed directly on Model B. Even a next-generation model from the same provider may require retraining or distillation.</div>
+
+      <div class="conclusion"><strong>A truly portable personal asset should include more than an adapter file.</strong> The demonstrations, accepted and rejected outputs, project files, memories, and personal evaluation suites that produced the personalized parameters are more valuable long-term. An adapter is like a compiled artifact for a specific W₀. When the base model changes, the original learning records can be used to generate a new adapter.</div>
+    </section>
+
+    <aside class="summary">
+      <h2>Eight essential takeaways</h2>
+      <ol>
+        <li>TTT aims to let a model learn from the current test input rather than merely inspect it in context.</li>
+        <li>TTT-E2E still uses a Transformer, replacing full attention with sliding-window attention.</li>
+        <li>The current text supplies next-token labels; the model uses forward → loss → backward to update dynamic MLPs.</li>
+        <li>Meta-learning prepares an initial model that improves after test-time updates.</li>
+        <li>LoRA is a low-cost update tool, not TTT itself. Some TTT methods use LoRA; final TTT-E2E does not.</li>
+        <li>The paper reduces forgetting risk with localized updates, a mostly frozen network, a fixed MLP path, and mini-batches—but offers no absolute guarantee.</li>
+        <li>The long-term vision is to turn LLMs from static models into controlled learning systems that form temporary capabilities while in use.</li>
+        <li>Future personalization may combine a shared W₀, small parameter updates, session TTT, and external memory—but parameter updates remain tied to a specific base model.</li>
+      </ol>
+    </aside>
+
+    <footer>
+      <strong>Fact-check scope</strong>
+      <p>This edition follows the original TTT-E2E paper and official code, with the methods, architecture, meta-learning setup, LoRA comparison, forgetting safeguards, and subsequent long-context TTT work checked against primary sources.</p>
+      <strong>Primary sources</strong>
+      <ul>
+        <li id="ref-foundation"><a href="https://arxiv.org/abs/1909.13231">[1] Sun et al., Test-Time Training with Self-Supervision</a>: the basic modern definition of TTT, ICML 2020.</li>
+        <li id="ref-layers"><a href="https://arxiv.org/abs/2407.04620">[2] Sun et al., Learning to (Learn at Test Time)</a>: TTT-Linear / TTT-MLP and the “hidden state as learner” idea.</li>
+        <li id="ref-e2e"><a href="https://arxiv.org/abs/2512.23675">[3] Tandon et al., End-to-End Test-Time Training for Long Context</a>: the primary paper for this note.</li>
+        <li id="ref-nvidia"><a href="https://developer.nvidia.com/blog/reimagining-llm-memory-using-context-as-training-data-unlocks-models-that-learn-at-test-time/">[4] Yu Sun & Yejin Choi, Reimagining LLM Memory</a>: the authors’ official engineering-oriented explanation and limitations.</li>
+        <li id="ref-lora"><a href="https://arxiv.org/abs/2106.09685">[5] Hu et al., LoRA</a>: the original definition of freezing base weights and training low-rank updates.</li>
+        <li id="ref-selfguided"><a href="https://arxiv.org/abs/2607.09415">[6] Self-Guided Test-Time Training for Long-Context LLMs</a>: training-data quality and how random spans can hurt performance.</li>
+        <li><a href="https://github.com/test-time-training/e2e">[7] Official TTT-E2E JAX code and checkpoints</a>: implementation and experiment reproduction.</li>
+      </ul>
+    </footer>
+  </main>
+</body>
+</html>

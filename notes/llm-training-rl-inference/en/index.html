@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Training, Online RL Inference, and Training–Inference Integration</title>
+  <style>
+    :root {
+      --bg: #f5f8fb;
+      --surface: #ffffff;
+      --surface-alt: #edf4f8;
+      --text: #183247;
+      --muted: #587080;
+      --border: #cfdee7;
+      --primary: #0e7490;
+      --primary-soft: #dff3f7;
+      --orange: #b85f12;
+      --orange-soft: #fff0df;
+      --blue: #315f91;
+      --code-bg: #132735;
+      --code-text: #e8f2f6;
+      --shadow: 0 12px 32px rgba(29, 66, 89, 0.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0f1b24;
+        --surface: #172631;
+        --surface-alt: #1d313e;
+        --text: #e3edf2;
+        --muted: #a6bac6;
+        --border: #304754;
+        --primary: #59c4dc;
+        --primary-soft: #163d48;
+        --orange: #f0a253;
+        --orange-soft: #422c19;
+        --blue: #8ab8e8;
+        --code-bg: #0a141b;
+        --code-text: #e8f2f6;
+        --shadow: none;
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #0f1b24;
+      --surface: #172631;
+      --surface-alt: #1d313e;
+      --text: #e3edf2;
+      --muted: #a6bac6;
+      --border: #304754;
+      --primary: #59c4dc;
+      --primary-soft: #163d48;
+      --orange: #f0a253;
+      --orange-soft: #422c19;
+      --blue: #8ab8e8;
+      --code-bg: #0a141b;
+      --code-text: #e8f2f6;
+      --shadow: none;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-size: 17px;
+      line-height: 1.8;
+    }
+    main { width: min(100% - 32px, 860px); margin: 0 auto; padding: 56px 0 80px; }
+    header { display: grid; gap: 18px; padding-bottom: 34px; border-bottom: 1px solid var(--border); }
+    h1, h2, h3 { margin: 0; line-height: 1.35; text-wrap: balance; }
+    h1 { max-width: 760px; font-family: Georgia,"Times New Roman",serif; font-size: clamp(2rem, 5vw, 3.25rem); letter-spacing: -0.03em; }
+    h2 { font-size: clamp(1.4rem, 3vw, 1.85rem); }
+    h3 { font-size: 1.08rem; }
+    p, ul, ol, pre, table, blockquote { margin: 0; }
+    a { color: var(--primary); text-underline-offset: 4px; }
+    .cite { font-size: 0.78em; font-weight: 700; text-decoration: none; vertical-align: super; }
+    .eyebrow { color: var(--primary); font: 700 0.78rem ui-monospace, Menlo, monospace; letter-spacing: 0.12em; text-transform: uppercase; }
+    .lead { max-width: 720px; color: var(--muted); font-size: 1.08rem; }
+    .thesis { padding: 18px 20px; border-left: 4px solid var(--primary); background: var(--primary-soft); font-weight: 650; }
+    nav { margin-top: 28px; padding: 22px 24px; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow); }
+    nav strong { display: block; margin-bottom: 10px; }
+    nav ol { display: grid; gap: 6px; padding-left: 22px; }
+    nav a { color: var(--text); text-decoration: none; }
+    nav a:hover { color: var(--primary); }
+    section { display: grid; gap: 20px; padding-top: 52px; }
+    .section-heading { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 14px; }
+    .number { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--primary); color: var(--primary); font: 700 0.82rem ui-monospace, Menlo, monospace; }
+    .note, .warning, .conclusion { padding: 18px 20px; border: 1px solid var(--border); background: var(--surface-alt); }
+    .note strong, .warning strong, .conclusion strong { display: block; margin-bottom: 4px; }
+    .warning { border-color: var(--orange); background: var(--orange-soft); }
+    .flow { overflow-x: auto; padding: 20px; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow); }
+    pre { min-width: max-content; padding: 18px 20px; overflow-x: auto; border-radius: 4px; background: var(--code-bg); color: var(--code-text); font: 0.88rem/1.65 ui-monospace, Menlo, monospace; }
+    .process-chart {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      width: 100%;
+      padding: 22px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .process-node {
+      position: relative;
+      display: grid;
+      flex: 1 0 128px;
+      min-height: 92px;
+      align-content: center;
+      justify-items: center;
+      gap: 5px;
+      padding: 14px 12px;
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      text-align: center;
+    }
+    .process-node strong { line-height: 1.35; }
+    .process-node small { color: var(--muted); line-height: 1.45; }
+    .process-node.training { border-color: var(--orange); }
+    .process-node.inference { border-color: var(--blue); }
+    .process-node.active { border-color: var(--primary); background: var(--primary-soft); }
+    .process-arrow {
+      position: relative;
+      flex: 0 0 44px;
+      min-width: 44px;
+    }
+    .process-arrow::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 5px;
+      right: 8px;
+      height: 2px;
+      background: var(--border);
+      transform: translateY(-50%);
+    }
+    .process-arrow::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: 5px;
+      width: 9px;
+      height: 9px;
+      border-top: 2px solid var(--primary);
+      border-right: 2px solid var(--primary);
+      transform: translateY(-50%) rotate(45deg);
+    }
+    .process-arrow span {
+      position: absolute;
+      top: calc(50% - 4px);
+      left: 5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: travel 2.2s ease-in-out infinite;
+    }
+    .branch-chart {
+      display: grid;
+      grid-template-columns: minmax(150px, 0.8fr) minmax(240px, 1.4fr);
+      gap: 18px;
+      padding: 22px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .branch-source { display: grid; place-items: center; }
+    .branch-options { display: grid; gap: 10px; }
+    .branch-option { padding: 14px 16px; border-left: 3px solid var(--primary); background: var(--surface-alt); }
+    .branch-option strong { display: block; }
+    .branch-option small { color: var(--muted); }
+    .loop-chart {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(130px, 1fr));
+      gap: 28px;
+      padding: 26px 22px 46px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .loop-chart .process-node:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      top: 50%;
+      right: -22px;
+      color: var(--primary);
+      font-size: 1.25rem;
+      transform: translate(50%, -50%);
+    }
+    .loop-back {
+      grid-column: 1 / -1;
+      position: relative;
+      height: 2px;
+      margin: -8px 7% 0;
+      background: var(--primary);
+    }
+    .loop-back::before {
+      content: "";
+      position: absolute;
+      left: -1px;
+      top: -4px;
+      width: 8px;
+      height: 8px;
+      border-left: 2px solid var(--primary);
+      border-bottom: 2px solid var(--primary);
+      transform: rotate(45deg);
+    }
+    .loop-back::after {
+      content: "Updated weights enter the next round";
+      position: absolute;
+      left: 50%;
+      top: 8px;
+      padding: 0 8px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.8rem;
+      transform: translateX(-50%);
+    }
+    @keyframes travel {
+      from { transform: translateX(0); opacity: 0.15; }
+      50% { opacity: 1; }
+      to { transform: translateX(26px); opacity: 0.15; }
+    }
+    ul, ol { padding-left: 24px; }
+    li + li { margin-top: 6px; }
+    .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .card { display: grid; align-content: start; gap: 10px; padding: 20px; border-top: 4px solid var(--primary); background: var(--surface); box-shadow: var(--shadow); }
+    .card.training { border-color: var(--orange); }
+    .card.serving { border-color: var(--blue); }
+    .card p { color: var(--muted); font-size: 0.94rem; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); }
+    table { width: 100%; min-width: 680px; border-collapse: collapse; background: var(--surface); font-size: 0.94rem; }
+    th, td { padding: 14px 16px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { background: var(--surface-alt); font-size: 0.86rem; letter-spacing: 0.03em; }
+    tr:last-child td { border-bottom: 0; }
+    .summary { display: grid; gap: 18px; margin-top: 56px; padding: 28px; border: 1px solid var(--primary); background: var(--primary-soft); }
+    .summary ol { display: grid; gap: 10px; }
+    footer { display: grid; gap: 14px; margin-top: 52px; padding-top: 28px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.9rem; }
+    footer ul { display: grid; gap: 6px; }
+    @media (max-width: 700px) {
+      main { width: min(100% - 24px, 860px); padding-top: 36px; }
+      .cards { grid-template-columns: 1fr; }
+      section { padding-top: 42px; }
+      .section-heading { grid-template-columns: 1fr; }
+      .process-chart { flex-direction: column; overflow: visible; }
+      .process-arrow { flex-basis: 36px; min-width: 0; min-height: 36px; }
+      .process-arrow::before { top: 4px; bottom: 8px; left: 50%; right: auto; width: 2px; height: auto; transform: translateX(-50%); }
+      .process-arrow::after { top: auto; right: auto; bottom: 5px; left: 50%; transform: translateX(-50%) rotate(135deg); }
+      .process-arrow span { top: 4px; left: calc(50% - 4px); animation-name: travel-down; }
+      .branch-chart { grid-template-columns: 1fr; }
+      .loop-chart { grid-template-columns: 1fr; gap: 30px; padding-bottom: 52px; }
+      .loop-chart .process-node:not(:last-child)::after { top: auto; right: 50%; bottom: -27px; transform: translate(50%, 0) rotate(90deg); }
+      .loop-back { grid-column: 1; margin-inline: 12%; }
+    }
+    @keyframes travel-down {
+      from { transform: translateY(0); opacity: 0.15; }
+      50% { opacity: 1; }
+      to { transform: translateY(22px); opacity: 0.15; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .process-arrow span { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;font-size:.9rem"><a href="../" hreflang="zh-CN">Chinese</a>&nbsp;·&nbsp;<strong>English</strong></div>
+    <header>
+      <div class="eyebrow">Fact-checked Learning Notes · LLM Systems</div>
+      <h1>LLM Training, Online RL Inference, and Training–Inference Integration</h1>
+      <p class="lead">This note maps the full LLM lifecycle from pre-training and post-training to production serving. It focuses on why online reinforcement learning requires inference, where PPO and GRPO fit, and what training–inference integration actually solves.</p>
+      <div class="thesis">Core idea: production inference for a released model usually uses frozen weights. During online RL, however, the model must repeatedly run inference to generate rollouts, so inference becomes part of the training loop.</div>
+    </header>
+
+    <nav aria-label="Article contents">
+      <strong>Contents</strong>
+      <ol>
+        <li><a href="#lifecycle">The LLM lifecycle: from training to deployment</a></li>
+        <li><a href="#stages">What problems do pre-training, SFT, and RL solve?</a></li>
+        <li><a href="#online-rl">RL requires online inference</a></li>
+        <li><a href="#ppo-grpo">Where do PPO and GRPO fit?</a></li>
+        <li><a href="#integration">Why online RL drives training–inference integration</a></li>
+        <li><a href="#serving">What happens after training?</a></li>
+      </ol>
+    </nav>
+
+    <section id="lifecycle">
+      <div class="section-heading"><div class="number">01</div><h2>The LLM lifecycle: from training to deployment</h2></div>
+      <p>Let us start with the big picture. Using the most familiar terms, this note summarizes post-training as <strong>SFT, RLHF, and RL</strong>. These are not three mutually exclusive boxes with perfectly sharp boundaries.</p>
+
+      <div class="process-chart" role="img" aria-label="The model moves from pre-training through post-training and evaluation, then into a production inference framework.">
+        <div class="process-node training"><strong>Pre-training</strong><small>Learn language and knowledge patterns</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>Post-training</strong><small>SFT · RLHF · RL</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node"><strong>Evaluation and release</strong><small>Select a checkpoint</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node inference"><strong>Production inference</strong><small>SGLang / vLLM</small></div>
+      </div>
+
+      <div class="branch-chart" role="img" aria-label="Three common post-training approaches: SFT, RLHF, and RL.">
+        <div class="branch-source"><div class="process-node active"><strong>Post-training</strong><small>Goal: improve responses, alignment, and task-solving ability</small></div></div>
+        <div class="branch-options">
+          <div class="branch-option"><strong>SFT · Supervised fine-tuning</strong><small>Show the model ideal answers and have it imitate them.</small></div>
+          <div class="branch-option"><strong>RLHF · Alignment from human feedback</strong><small>Use human-preference signals to shape model behavior; the classic recipe may include a reward model and PPO.</small></div>
+          <div class="branch-option"><strong>RL · Reinforcement learning</strong><small>The model first attempts a task, then updates from rules, verifiers, reward models, or environmental feedback.</small></div>
+        </div>
+      </div>
+
+      <div class="warning"><strong>A note on terminology</strong> RLHF commonly uses RL, so the two are not entirely separate or parallel stages. They are listed separately here to make the introductory picture easier to follow: <strong>RLHF emphasizes adjusting a model from human preferences; RL emphasizes the attempt → reward → update mechanism.</strong> The classic InstructGPT RLHF pipeline is SFT → reward model → PPO.<a class="cite" href="#ref-instructgpt">[1]</a></div>
+    </section>
+
+    <section id="stages">
+      <div class="section-heading"><div class="number">02</div><h2>What problems do pre-training, SFT, and RL solve?</h2></div>
+      <h3>2.1 Pre-training: build broad foundational capabilities</h3>
+      <p>For autoregressive language models such as GPT, pre-training typically learns language patterns, knowledge associations, and transferable representations from large corpora of text and code by predicting the next token. It does not write encyclopedia entries into a database one by one; it embeds statistical regularities in model parameters.</p>
+      <div class="conclusion"><strong>My takeaway</strong> Pre-training lets the model read widely and learn language regularities, but it does not guarantee instruction-following, formatting discipline, or alignment with human preferences.</div>
+
+      <h3>2.2 SFT: provide ideal answers for the model to imitate</h3>
+      <p>SFT (supervised fine-tuning) uses prepared “question → ideal answer” examples. During training, model predictions are compared with the target answers, and backpropagation adjusts the weights.</p>
+      <div class="process-chart" role="img" aria-label="SFT flow from fixed demonstrations to model-weight updates.">
+        <div class="process-node"><strong>Fixed demonstration data</strong><small>Question + ideal answer</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>Model imitates the answer</strong><small>Predict the next token</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node"><strong>Compute the error</strong><small>Difference between prediction and target</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node training"><strong>Update weights</strong><small>Learn the desired patterns</small></div>
+      </div>
+
+      <h3>2.3 Online RL: let the model attempt the task before updating</h3>
+      <p>Online RL has the current model generate answers or action sequences called <strong>rollouts (sampled trajectories)</strong>. The system then assigns rewards based on the results and adjusts the model.</p>
+      <div class="loop-chart" role="img" aria-label="In online RL, the model generates, receives scores, updates weights, and enters the next round.">
+        <div class="process-node inference"><strong>Current model</strong><small>The current capability version</small></div>
+        <div class="process-node"><strong>Generate rollouts</strong><small>Answers, code, or tool-use trajectories</small></div>
+        <div class="process-node active"><strong>Verification and reward</strong><small>Correctness, tests, or preference scores</small></div>
+        <div class="process-node training"><strong>Update model weights</strong><small>Increase the probability of high-reward behavior</small></div>
+        <div class="loop-back" aria-hidden="true"></div>
+      </div>
+      <div class="note"><strong>The most important basic concept</strong><strong>Here, “updating the policy model” usually means updating the trainable weights of the language model.</strong> In RL terminology, a policy describes the probabilities with which the model generates tokens or actions for a given input. Changing the weights changes those output probabilities, so we say the policy has been updated. If only LoRA is trained, the adapter parameters change rather than all base-model weights.</div>
+      <div class="note"><strong>How is a rollout related to ordinary inference?</strong> Text generation uses the same forward computation, but RL also stores training information such as generation probabilities and rewards, then performs backpropagation. User-facing production inference usually generates an answer without backpropagating after every request.<a class="cite" href="#ref-ppo">[2]</a></div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Method</th><th>What the model receives</th><th>How the model learns</th></tr></thead>
+          <tbody>
+            <tr><td>Pre-training</td><td>Large corpora of text, code, and other data</td><td>Learn next-token prediction</td></tr>
+            <tr><td>SFT</td><td>Questions and ideal answers</td><td>Imitate target demonstrations</td></tr>
+            <tr><td>Online RL</td><td>Problems, self-generated rollouts, and rewards</td><td>Increase the probability of high-reward behavior</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="online-rl">
+      <div class="section-heading"><div class="number">03</div><h2>RL requires online inference</h2></div>
+      <p>“Online” does not mean connected to the internet. It means that <strong>the model continuously generates new answers or actions during training, receives feedback from that new experience, and updates its weights again.</strong></p>
+
+      <div class="process-chart" role="img" aria-label="Each online RL round uses the current model to generate new experience and train the next version.">
+        <div class="process-node"><strong>Model θ₀</strong><small>Generate the first batch of experience</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node training"><strong>Update weights from rewards</strong><small>Obtain θ₁</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node"><strong>Model θ₁</strong><small>Generate the second batch of experience</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node training"><strong>Continue updating weights</strong><small>Obtain θ₂…</small></div>
+      </div>
+
+      <div class="note"><strong>A student-practice analogy</strong> Each time a student learns something, they attempt the next set of problems at their new level. New answers produce new feedback, which changes the student again. Likewise, θ₀ generates experience and is updated into θ₁; θ₁ then generates the next batch. PPO and GRPO are typical algorithms that turn rewards into these weight updates.</div>
+    </section>
+
+    <section id="ppo-grpo">
+      <div class="section-heading"><div class="number">04</div><h2>PPO and GRPO: turning rewards into weight updates</h2></div>
+      <p>The model has generated rollouts and received rewards. The next question is: <strong>which answers should be reinforced, and by how much should the weights change?</strong> PPO and GRPO are two algorithms for this stage.</p>
+
+      <div class="process-chart" role="img" aria-label="PPO and GRPO sit between reward assignment and weight updates.">
+        <div class="process-node"><strong>Generate answers</strong><small>The model attempts the task</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>Receive rewards</strong><small>Evaluate answer quality</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node training"><strong>PPO / GRPO</strong><small>Convert rewards into a training signal</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node"><strong>Update weights</strong><small>Obtain a new model</small></div>
+      </div>
+
+      <h3>The key difference: how do they judge how good an answer is relative to a baseline?</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Comparison</th><th>PPO</th><th>GRPO</th></tr></thead>
+          <tbody>
+            <tr><td>Basic approach</td><td>Train an additional critic to estimate the expected score of an answer</td><td>Generate a group of answers to the same problem and compare their scores within the group</td></tr>
+            <tr><td>Intuition</td><td>Reinforce the answer when its actual score exceeds the critic’s expectation</td><td>Reinforce an answer when it scores above the group average</td></tr>
+            <tr><td>Additional cost</td><td>Requires training and storing a critic</td><td>No separate critic, but multiple answers must be generated for each problem</td></tr>
+            <tr><td>Shared property</td><td colspan="2">Both require reward signals and update language-model weights through backpropagation</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="cards">
+        <article class="card training"><h3>PPO: compare with an expected score</h3><p>For example, if the critic expects 60 points but the answer earns 85, the result is better than expected, so the model should preserve more of this response behavior.</p></article>
+        <article class="card serving"><h3>GRPO: compare within a group</h3><p>Generate four answers to the same problem. If the group average is 60 and one answer scores 90, that answer is above the group baseline and is reinforced.</p></article>
+        <article class="card"><h3>Both ultimately do the same thing</h3><p>Turn the comparison into a training signal and use backpropagation to adjust model weights from θ₁ to θ₂.</p></article>
+      </div>
+
+      <p>Strictly speaking, PPO constrains each update from becoming too large, and the original GRPO design also includes stability constraints. Those mathematical details do not change the core intuition here.<a class="cite" href="#ref-ppo">[2]</a><a class="cite" href="#ref-grpo">[3]</a></p>
+      <div class="warning"><strong>Both still require rewards</strong> Math answers can be verified and code can be tested; more subjective tasks may use a reward model. GRPO removes the separate critic—not the scoring step.</div>
+    </section>
+
+    <section id="integration">
+      <div class="section-heading"><div class="number">05</div><h2>Training–inference integration: making generation and training work efficiently together</h2></div>
+      <p>Now connect the first four sections: the model first uses <strong>Inference</strong> to generate rollouts; PPO/GRPO then use <strong>Training</strong> to update the weights. The new weights return to the inference side to generate the next batch of rollouts. This loop may repeat hundreds or thousands of times.</p>
+
+      <div class="loop-chart" role="img" aria-label="The inference engine, environment rewards, PPO/GRPO trainer, and weight synchronization form the online RL system loop.">
+        <div class="process-node inference"><strong>Inference engine</strong><small>Generate rollouts at scale</small></div>
+        <div class="process-node"><strong>Environment and tools</strong><small>Run code, search, or take actions</small></div>
+        <div class="process-node active"><strong>Reward and verification</strong><small>Judge outcome quality</small></div>
+        <div class="process-node training"><strong>Trainer</strong><small>PPO / GRPO updates weights</small></div>
+        <div class="loop-back" aria-hidden="true"></div>
+      </div>
+
+      <div class="note"><strong>Why not use an ordinary training program?</strong> Ordinary SFT can train continuously on a prepared dataset. Online RL data is generated by the model on the fly while the weights keep changing, so the system must repeatedly complete “generate → score → update → synchronize new weights.”</div>
+
+      <p>That is what training–inference integration addresses: not conflating training and inference, but making their handoff efficient.</p>
+      <div class="cards">
+        <article class="card serving"><h3>Inference hands off rollouts</h3><p>Pass newly generated answers, action trajectories, and associated training information to scoring and training.</p></article>
+        <article class="card training"><h3>Training returns new weights</h3><p>PPO/GRPO updates the model from rewards and returns the new weights to inference for the next round.</p></article>
+        <article class="card"><h3>The system reduces idle time</h3><p>Reduce data movement, repeated loading, and GPU idling so the loop runs faster.</p></article>
+      </div>
+      <p>Training and inference may alternate on the same GPUs or run on separate GPU pools. This is an engineering choice, not a change to the core process. HybridFlow and vLLM both support coordination and weight synchronization between training and generation.<a class="cite" href="#ref-hybridflow">[4]</a><a class="cite" href="#ref-vllm">[5]</a></p>
+    </section>
+
+    <section id="serving">
+      <div class="section-heading"><div class="number">06</div><h2>After training: switching from learning mode to serving mode</h2></div>
+      <p>Once a training run reaches its goals, the team selects candidate checkpoints, evaluates capability, safety, and stability, and hands the chosen weight snapshot to the production inference system.</p>
+
+      <div class="process-chart" role="img" aria-label="After training, checkpoints are evaluated, a weight snapshot is selected, and the model is deployed for production inference.">
+        <div class="process-node training"><strong>Complete training</strong><small>Stop updates for this run</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node"><strong>Evaluate checkpoints</strong><small>Capability · safety · stability</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>Select a weight snapshot</strong><small>Choose the production model version</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node inference"><strong>Deploy with an inference framework</strong><small>SGLang / vLLM</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node"><strong>Serve users</strong><small>Forward generation only</small></div>
+      </div>
+
+      <h3>What does the inference framework do?</h3>
+      <p>Inference frameworks such as SGLang and vLLM no longer aim to teach the model. Their job is to answer more requests faster, more cheaply, and more reliably with the chosen weights. They handle request scheduling, continuous batching, KV cache and GPU-memory management, model parallelism, and optimized kernels. Prefill/decode disaggregation, low precision, and multi-node deployment depend on the configuration.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Comparison</th><th>Rollout inference during RL training</th><th>Production inference after release</th></tr></thead>
+          <tbody>
+            <tr><td>Purpose</td><td>Generate training experience so the model can keep learning</td><td>Reliably serve real users</td></tr>
+            <tr><td>Backpropagation afterward?</td><td>Yes—PPO/GRPO updates the weights</td><td>Usually not after an ordinary request</td></tr>
+            <tr><td>Weight state</td><td>Changes every round or every few rounds</td><td>Uses the selected snapshot until an explicit update</td></tr>
+            <tr><td>Core system metrics</td><td>Generation and training efficiency</td><td>Latency, throughput, cost, and reliability</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="conclusion"><strong>The complete chain</strong> SFT, RLHF, and RL change the model during training. Online RL uses an inference engine to generate rollouts. PPO/GRPO turns rewards into weight updates. Training–inference integration makes the loop efficient. After training, the chosen weight snapshot is served by SGLang/vLLM.</div>
+    </section>
+
+    <aside class="summary">
+      <h2>Six takeaways</h2>
+      <ol>
+        <li>LLMs first undergo pre-training and post-training. SFT, RLHF, and RL are common post-training terms, but they can overlap.</li>
+        <li>SFT imitates target answers; online RL first generates rollouts, then updates weights from rewards.</li>
+        <li>For PPO/GRPO, “updating the model” means training its trainable weights.</li>
+        <li>PPO and GRPO sit between “receive reward” and “update weights,” computing how the weights should change.</li>
+        <li>Training–inference integration connects rollout generation and training updates, with either colocated or disaggregated deployment.</li>
+        <li>After training, the selected weight snapshot is served by inference frameworks such as SGLang and vLLM.</li>
+      </ol>
+    </aside>
+
+    <footer>
+      <strong>Fact-check note</strong>
+      <p>This page was checked against original papers and official framework documentation on August 11, 2026. It distinguishes typical implementations from necessary definitions and uses qualifiers such as “can” and “usually” so that one framework’s design is not presented as an industry-wide rule.</p>
+      <strong>Primary sources</strong>
+      <ul>
+        <li id="ref-instructgpt"><a href="https://arxiv.org/abs/2203.02155">[1] Ouyang et al., InstructGPT</a>: the classic SFT → reward model → PPO RLHF pipeline.</li>
+        <li id="ref-ppo"><a href="https://arxiv.org/abs/1707.06347">[2] Schulman et al., Proximal Policy Optimization Algorithms</a>: the original PPO paper.</li>
+        <li id="ref-grpo"><a href="https://arxiv.org/abs/2402.03300">[3] Shao et al., DeepSeekMath</a>: the original GRPO proposal and removal of the separate critic.</li>
+        <li id="ref-hybridflow"><a href="https://arxiv.org/abs/2409.19256">[4] Sheng et al., HybridFlow</a>: system coordination between RLHF training and generation.</li>
+        <li id="ref-vllm"><a href="https://docs.vllm.ai/en/stable/training/weight_transfer/">[5] vLLM Weight Transfer documentation</a>: weight synchronization between training and rollout inference.</li>
+      </ul>
+    </footer>
+  </main>
+</body>
+</html>
