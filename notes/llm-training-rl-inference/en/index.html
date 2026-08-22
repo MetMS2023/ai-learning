@@ -68,7 +68,9 @@
       font-size: 17px;
       line-height: 1.8;
     }
-    main { width: min(100% - 32px, 860px); margin: 0 auto; padding: 56px 0 80px; }
+    main { width: min(100% - 32px, 1162px); margin: 0 auto; padding: 56px 0 80px; }
+    .page-shell { display: grid; grid-template-columns: 270px minmax(0, 860px); gap: 32px; align-items: start; }
+    .article-column { min-width: 0; }
     header { display: grid; gap: 18px; padding-bottom: 34px; border-bottom: 1px solid var(--border); }
     h1, h2, h3 { margin: 0; line-height: 1.35; text-wrap: balance; }
     h1 { max-width: 760px; font-family: Georgia,"Times New Roman",serif; font-size: clamp(2rem, 5vw, 3.25rem); letter-spacing: -0.03em; }
@@ -85,6 +87,19 @@
     nav ol { display: grid; gap: 6px; padding-left: 22px; }
     nav a { color: var(--text); text-decoration: none; }
     nav a:hover { color: var(--primary); }
+    .utility-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 1rem; font-size: .9rem; }
+    .utility-bar a { text-decoration: none; }
+    .navigation-grid { position: sticky; top: 24px; display: grid; grid-template-columns: 1fr; gap: 16px; max-height: calc(100vh - 48px); overflow-y: auto; align-items: start; }
+    .navigation-grid nav { margin-top: 0; }
+    .note-library { padding: 22px 24px; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow); }
+    .note-library strong { display: block; margin-bottom: 10px; }
+    .note-list { display: grid; gap: 10px; padding: 0; list-style: none; }
+    .note-list li { padding-bottom: 10px; border-bottom: 1px solid var(--border); line-height: 1.5; }
+    .note-list li:last-child { border-bottom: 0; }
+    .note-list [aria-current="page"] { color: var(--muted); }
+    .note-library a { color: var(--text); text-decoration: none; }
+    .note-library a:hover { color: var(--primary); }
+    .all-notes { display: inline-block; margin-top: 12px; color: var(--primary) !important; font-weight: 700; }
     section { display: grid; gap: 20px; padding-top: 52px; }
     .section-heading { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 14px; }
     .number { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--primary); color: var(--primary); font: 700 0.82rem ui-monospace, Menlo, monospace; }
@@ -260,6 +275,11 @@
       50% { opacity: 1; }
       to { transform: translateY(22px); opacity: 0.15; }
     }
+    @media (max-width: 960px) {
+      main { width: min(100% - 32px, 860px); }
+      .page-shell { display: block; }
+      .navigation-grid { position: static; max-height: none; margin-top: 28px; overflow: visible; }
+    }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       .process-arrow span { animation: none; }
@@ -268,14 +288,9 @@
 </head>
 <body>
   <main>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;font-size:.9rem"><a href="../" hreflang="zh-CN">Chinese</a>&nbsp;·&nbsp;<strong>English</strong></div>
-    <header>
-      <div class="eyebrow">Fact-checked Learning Notes · LLM Systems</div>
-      <h1>LLM Training, RL Rollouts, and Training–Inference Integration</h1>
-      <p class="lead">This note maps the full LLM lifecycle from pre-training and post-training to production serving. It focuses on why on-policy RL requires fresh rollouts, where PPO and GRPO fit, and what training–inference integration actually solves.</p>
-      <div class="thesis">Core idea: the current policy generates rollouts, updates its weights, and then generates the next batch of experience. That is standard on-policy RL; the distinctive LLM challenge is executing generation, scoring, training, and weight synchronization efficiently at massive scale.</div>
-    </header>
-
+    <div class="utility-bar"><a href="../../../">← All notes</a><span><a href="../" hreflang="zh-CN">Chinese</a>&nbsp;·&nbsp;<strong>English</strong></span></div>
+    <div class="page-shell">
+    <div class="navigation-grid">
     <nav aria-label="Article contents">
       <strong>Contents</strong>
       <ol>
@@ -287,6 +302,22 @@
         <li><a href="#serving">What happens after training?</a></li>
       </ol>
     </nav>
+      <aside class="note-library" aria-label="Other learning notes">
+        <strong>AI Learning Library</strong>
+        <ul class="note-list">
+          <li aria-current="page">Current: LLM Training, RL Rollouts, and Training–Inference Integration</li>
+          <li><a href="../../test-time-training/en/">Test-Time Training: Teaching LLMs While They Work</a></li>
+        </ul>
+        <a class="all-notes" href="../../../">Browse all notes →</a>
+      </aside>
+    </div>
+      <article class="article-column">
+    <header>
+      <div class="eyebrow">Fact-checked Learning Notes · LLM Systems</div>
+      <h1>LLM Training, RL Rollouts, and Training–Inference Integration</h1>
+      <p class="lead">This note maps the full LLM lifecycle from pre-training and post-training to production serving. It focuses on why on-policy RL requires fresh rollouts, where PPO and GRPO fit, and what training–inference integration actually solves.</p>
+      <div class="thesis">Core idea: the current policy generates rollouts, updates its weights, and then generates the next batch of experience. That is standard on-policy RL; the distinctive LLM challenge is executing generation, scoring, training, and weight synchronization efficiently at massive scale.</div>
+    </header>
 
     <section id="lifecycle">
       <div class="section-heading"><div class="number">01</div><h2>The LLM lifecycle: from training to deployment</h2></div>
@@ -332,9 +363,9 @@
         <div class="process-node training"><strong>Update weights</strong><small>Learn the desired patterns</small></div>
       </div>
 
-      <h3>2.3 Online RL: let the model attempt the task before updating</h3>
-      <p>Online RL has the current model generate answers or action sequences called <strong>rollouts (sampled trajectories)</strong>. The system then assigns rewards based on the results and adjusts the model.</p>
-      <div class="loop-chart" role="img" aria-label="In online RL, the model generates, receives scores, updates weights, and enters the next round.">
+      <h3>2.3 On-policy online RL: let the current policy attempt the task before updating</h3>
+      <p>On-policy RL has the current policy generate answers or action sequences called <strong>rollouts (sampled trajectories)</strong>. The system then assigns rewards based on the results and adjusts the model.</p>
+      <div class="loop-chart" role="img" aria-label="In on-policy RL, the model generates, receives scores, updates weights, and enters the next round.">
         <div class="process-node inference"><strong>Current model</strong><small>The current capability version</small></div>
         <div class="process-node"><strong>Generate rollouts</strong><small>Answers, code, or tool-use trajectories</small></div>
         <div class="process-node active"><strong>Verification and reward</strong><small>Correctness, tests, or preference scores</small></div>
@@ -350,7 +381,7 @@
           <tbody>
             <tr><td>Pre-training</td><td>Large corpora of text, code, and other data</td><td>Learn next-token prediction</td></tr>
             <tr><td>SFT</td><td>Questions and ideal answers</td><td>Imitate target demonstrations</td></tr>
-            <tr><td>Online RL</td><td>Problems, self-generated rollouts, and rewards</td><td>Increase the probability of high-reward behavior</td></tr>
+            <tr><td>On-policy RL</td><td>Problems, self-generated rollouts, and rewards</td><td>Increase the probability of high-reward behavior</td></tr>
           </tbody>
         </table>
       </div>
@@ -360,7 +391,7 @@
       <div class="section-heading"><div class="number">03</div><h2>On-policy RL requires fresh rollouts</h2></div>
       <p>“Online” does not mean connected to the internet. Here we are discussing common <strong>on-policy RL</strong>: the current policy generates fresh answers or actions, those experiences provide the training signal, the weights are updated, and the updated policy generates the next batch. This is the standard on-policy RL mechanism, not an algorithm unique to LLMs.</p>
 
-      <div class="process-chart" role="img" aria-label="Each online RL round uses the current model to generate new experience and train the next version.">
+      <div class="process-chart" role="img" aria-label="Each on-policy RL round uses the current model to generate new experience and train the next version.">
         <div class="process-node"><strong>Model θ₀</strong><small>Generate the first batch of experience</small></div>
         <div class="process-arrow" aria-hidden="true"><span></span></div>
         <div class="process-node training"><strong>Update weights from rewards</strong><small>Obtain θ₁</small></div>
@@ -414,7 +445,7 @@
       <div class="section-heading"><div class="number">05</div><h2>Training–inference integration: making generation and training work efficiently together</h2></div>
       <p>Now connect the first four sections: the model first uses <strong>Inference</strong> to generate rollouts; PPO/GRPO then use <strong>Training</strong> to update the weights. The new weights return to the inference side to generate the next batch of rollouts. This loop may repeat hundreds or thousands of times.</p>
 
-      <div class="loop-chart" role="img" aria-label="The inference engine, environment rewards, PPO/GRPO trainer, and weight synchronization form the online RL system loop.">
+      <div class="loop-chart" role="img" aria-label="The inference engine, environment rewards, PPO/GRPO trainer, and weight synchronization form the on-policy RL system loop.">
         <div class="process-node inference"><strong>Inference engine</strong><small>Generate rollouts at scale</small></div>
         <div class="process-node"><strong>Environment and tools</strong><small>Run code, search, or take actions</small></div>
         <div class="process-node active"><strong>Reward and verification</strong><small>Judge outcome quality</small></div>
@@ -470,7 +501,7 @@
       <h2>Six takeaways</h2>
       <ol>
         <li>LLMs first undergo pre-training and post-training. SFT, RLHF, and RL are common post-training terms, but they can overlap.</li>
-        <li>SFT imitates target answers; online RL first generates rollouts, then updates weights from rewards.</li>
+        <li>SFT imitates target answers; on-policy RL first generates rollouts, then updates weights from rewards.</li>
         <li>For PPO/GRPO, “updating the model” means training its trainable weights.</li>
         <li>PPO and GRPO sit between “receive reward” and “update weights,” computing how the weights should change.</li>
         <li>Training–inference integration connects rollout generation and training updates, with either colocated or disaggregated deployment.</li>
@@ -490,6 +521,8 @@
         <li id="ref-vllm"><a href="https://docs.vllm.ai/en/stable/training/weight_transfer/">[5] vLLM Weight Transfer documentation</a>: weight synchronization between training and rollout inference.</li>
       </ul>
     </footer>
+      </article>
+    </div>
   </main>
 </body>
 </html>

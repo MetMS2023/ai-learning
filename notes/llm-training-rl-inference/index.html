@@ -68,7 +68,9 @@
       font-size: 17px;
       line-height: 1.8;
     }
-    main { width: min(100% - 32px, 860px); margin: 0 auto; padding: 56px 0 80px; }
+    main { width: min(100% - 32px, 1162px); margin: 0 auto; padding: 56px 0 80px; }
+    .page-shell { display: grid; grid-template-columns: 270px minmax(0, 860px); gap: 32px; align-items: start; }
+    .article-column { min-width: 0; }
     header { display: grid; gap: 18px; padding-bottom: 34px; border-bottom: 1px solid var(--border); }
     h1, h2, h3 { margin: 0; line-height: 1.35; text-wrap: balance; }
     h1 { max-width: 760px; font-family: "Songti SC", STSong, serif; font-size: clamp(2rem, 5vw, 3.25rem); letter-spacing: -0.03em; }
@@ -85,6 +87,19 @@
     nav ol { display: grid; gap: 6px; padding-left: 22px; }
     nav a { color: var(--text); text-decoration: none; }
     nav a:hover { color: var(--primary); }
+    .utility-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 1rem; font-size: .9rem; }
+    .utility-bar a { text-decoration: none; }
+    .navigation-grid { position: sticky; top: 24px; display: grid; grid-template-columns: 1fr; gap: 16px; max-height: calc(100vh - 48px); overflow-y: auto; align-items: start; }
+    .navigation-grid nav { margin-top: 0; }
+    .note-library { padding: 22px 24px; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow); }
+    .note-library strong { display: block; margin-bottom: 10px; }
+    .note-list { display: grid; gap: 10px; padding: 0; list-style: none; }
+    .note-list li { padding-bottom: 10px; border-bottom: 1px solid var(--border); line-height: 1.5; }
+    .note-list li:last-child { border-bottom: 0; }
+    .note-list [aria-current="page"] { color: var(--muted); }
+    .note-library a { color: var(--text); text-decoration: none; }
+    .note-library a:hover { color: var(--primary); }
+    .all-notes { display: inline-block; margin-top: 12px; color: var(--primary) !important; font-weight: 700; }
     section { display: grid; gap: 20px; padding-top: 52px; }
     .section-heading { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 14px; }
     .number { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--primary); color: var(--primary); font: 700 0.82rem ui-monospace, Menlo, monospace; }
@@ -260,6 +275,11 @@
       50% { opacity: 1; }
       to { transform: translateY(22px); opacity: 0.15; }
     }
+    @media (max-width: 960px) {
+      main { width: min(100% - 32px, 860px); }
+      .page-shell { display: block; }
+      .navigation-grid { position: static; max-height: none; margin-top: 28px; overflow: visible; }
+    }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       .process-arrow span { animation: none; }
@@ -268,14 +288,9 @@
 </head>
 <body>
   <main>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;font-size:.9rem"><strong>中文</strong>&nbsp;·&nbsp;<a href="./en/" hreflang="en">English</a></div>
-    <header>
-      <div class="eyebrow">Fact-checked Learning Notes · LLM Systems</div>
-      <h1>大模型训练、RL Rollout 与训推一体化</h1>
-      <p class="lead">这份笔记梳理大模型从预训练、后训练到上线服务的完整生命周期，重点理解 on-policy RL 为什么要持续生成新 Rollout、PPO/GRPO 位于哪个环节，以及“训推一体化”究竟解决什么问题。</p>
-      <div class="thesis">核心认识：当前策略生成 Rollout、更新权重、再生成下一批经验，是 on-policy RL 的标准机制。大模型领域的特殊挑战，主要在于如何以极大规模高效完成生成、评分、训练与权重同步。</div>
-    </header>
-
+    <div class="utility-bar"><a href="../../">← 全部笔记</a><span><strong>中文</strong>&nbsp;·&nbsp;<a href="./en/" hreflang="en">English</a></span></div>
+    <div class="page-shell">
+    <div class="navigation-grid">
     <nav aria-label="文章目录">
       <strong>学习目录</strong>
       <ol>
@@ -287,6 +302,22 @@
         <li><a href="#serving">模型训练完成后发生什么</a></li>
       </ol>
     </nav>
+      <aside class="note-library" aria-label="其他学习笔记">
+        <strong>AI Learning 笔记库</strong>
+        <ul class="note-list">
+          <li aria-current="page">当前文章：大模型训练、RL Rollout 与训推一体化</li>
+          <li><a href="../test-time-training/">Test-Time Training：让 LLM 在使用时继续学习</a></li>
+        </ul>
+        <a class="all-notes" href="../../">浏览全部笔记 →</a>
+      </aside>
+    </div>
+      <article class="article-column">
+    <header>
+      <div class="eyebrow">Fact-checked Learning Notes · LLM Systems</div>
+      <h1>大模型训练、RL Rollout 与训推一体化</h1>
+      <p class="lead">这份笔记梳理大模型从预训练、后训练到上线服务的完整生命周期，重点理解 on-policy RL 为什么要持续生成新 Rollout、PPO/GRPO 位于哪个环节，以及“训推一体化”究竟解决什么问题。</p>
+      <div class="thesis">核心认识：当前策略生成 Rollout、更新权重、再生成下一批经验，是 on-policy RL 的标准机制。大模型领域的特殊挑战，主要在于如何以极大规模高效完成生成、评分、训练与权重同步。</div>
+    </header>
 
     <section id="lifecycle">
       <div class="section-heading"><div class="number">01</div><h2>大模型从训练到上线的生命周期</h2></div>
@@ -332,9 +363,9 @@
         <div class="process-node training"><strong>更新权重</strong><small>把正确模式学进去</small></div>
       </div>
 
-      <h3>2.3 在线 RL：没有完整标准过程，让模型先尝试</h3>
-      <p>在线 RL 会让当前模型针对问题生成回答或行动过程，称为 <strong>Rollout（采样轨迹）</strong>；系统再根据结果给出奖励，并调整模型。</p>
-      <div class="loop-chart" role="img" aria-label="在线 RL 中模型生成、评分、更新权重并进入下一轮的循环">
+      <h3>2.3 On-policy online RL：让当前策略先尝试，再更新</h3>
+      <p>On-policy RL 会让当前策略针对问题生成回答或行动过程，称为 <strong>Rollout（采样轨迹）</strong>；系统再根据结果给出奖励，并调整模型。</p>
+      <div class="loop-chart" role="img" aria-label="On-policy RL 中模型生成、评分、更新权重并进入下一轮的循环">
         <div class="process-node inference"><strong>当前模型</strong><small>此刻的能力版本</small></div>
         <div class="process-node"><strong>生成 Rollout</strong><small>答案、代码或工具轨迹</small></div>
         <div class="process-node active"><strong>验证与奖励</strong><small>对错、测试或偏好分</small></div>
@@ -350,7 +381,7 @@
           <tbody>
             <tr><td>预训练</td><td>海量文本、代码等数据</td><td>学习预测下一个 Token</td></tr>
             <tr><td>SFT</td><td>问题和理想回答</td><td>模仿标准示范</td></tr>
-            <tr><td>在线 RL</td><td>问题、自己生成的 Rollout 和奖励</td><td>提高高奖励行为的概率</td></tr>
+            <tr><td>On-policy RL</td><td>问题、自己生成的 Rollout 和奖励</td><td>提高高奖励行为的概率</td></tr>
           </tbody>
         </table>
       </div>
@@ -360,7 +391,7 @@
       <div class="section-heading"><div class="number">03</div><h2>On-policy RL 需要持续生成新 Rollout</h2></div>
       <p>“在线”不是指连接互联网。这里讨论的是常见的 <strong>on-policy RL</strong>：当前策略生成新的回答或行动，用这些经验计算训练信号并更新权重，再由更新后的策略生成下一批经验。这是 on-policy RL 的标准机制，并非大模型独有的新算法。</p>
 
-      <div class="process-chart" role="img" aria-label="在线 RL 每一轮都用当前模型生成新经验，再训练出下一版本">
+      <div class="process-chart" role="img" aria-label="On-policy RL 每一轮都用当前模型生成新经验，再训练出下一版本">
         <div class="process-node"><strong>模型 θ₀</strong><small>生成第 1 批经验</small></div>
         <div class="process-arrow" aria-hidden="true"><span></span></div>
         <div class="process-node training"><strong>根据奖励更新权重</strong><small>得到 θ₁</small></div>
@@ -470,7 +501,7 @@
       <h2>六点学习总结</h2>
       <ol>
         <li>大模型先经历预训练和后训练；后训练常用 SFT、RLHF、RL 等概念描述，但它们可能重叠。</li>
-        <li>SFT 模仿标准答案；在线 RL 则让模型先生成 Rollout，再根据奖励更新权重。</li>
+        <li>SFT 模仿标准答案；On-policy RL 则让模型先生成 Rollout，再根据奖励更新权重。</li>
         <li>PPO/GRPO 所说的“更新模型”，就是通过训练调整模型的可训练权重。</li>
         <li>PPO 和 GRPO 位于“获得奖励 → 更新权重”之间，负责计算权重该怎样改变。</li>
         <li>训推一体化连接“生成 Rollout”和“训练更新”，既可以共置，也可以分离部署。</li>
@@ -490,6 +521,8 @@
         <li id="ref-vllm"><a href="https://docs.vllm.ai/en/stable/training/weight_transfer/">[5] vLLM Weight Transfer 官方文档</a>：训练端与 Rollout 推理端的权重同步。</li>
       </ul>
     </footer>
+      </article>
+    </div>
   </main>
 </body>
 </html>
