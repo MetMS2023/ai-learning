@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>大模型训练、RL在线推理与训推一体化</title>
+  <title>大模型训练、RL Rollout 与训推一体化</title>
   <style>
     :root {
       --bg: #f5f8fb;
@@ -271,9 +271,9 @@
     <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;font-size:.9rem"><strong>中文</strong>&nbsp;·&nbsp;<a href="./en/" hreflang="en">English</a></div>
     <header>
       <div class="eyebrow">Fact-checked Learning Notes · LLM Systems</div>
-      <h1>大模型训练、RL在线推理与训推一体化</h1>
-      <p class="lead">这份笔记梳理大模型从预训练、后训练到上线服务的完整生命周期，重点理解在线强化学习为什么需要推理、PPO/GRPO 位于哪个环节，以及“训推一体化”究竟解决什么问题。</p>
-      <div class="thesis">核心认识：大模型发布后的生产推理通常使用冻结权重；但在在线 RL 训练期间，模型也必须不断执行推理来生成 Rollout，因此推理成为训练闭环的一部分。</div>
+      <h1>大模型训练、RL Rollout 与训推一体化</h1>
+      <p class="lead">这份笔记梳理大模型从预训练、后训练到上线服务的完整生命周期，重点理解 on-policy RL 为什么要持续生成新 Rollout、PPO/GRPO 位于哪个环节，以及“训推一体化”究竟解决什么问题。</p>
+      <div class="thesis">核心认识：当前策略生成 Rollout、更新权重、再生成下一批经验，是 on-policy RL 的标准机制。大模型领域的特殊挑战，主要在于如何以极大规模高效完成生成、评分、训练与权重同步。</div>
     </header>
 
     <nav aria-label="文章目录">
@@ -281,9 +281,9 @@
       <ol>
         <li><a href="#lifecycle">大模型从训练到上线的生命周期</a></li>
         <li><a href="#stages">预训练、SFT 和 RL 分别解决什么问题</a></li>
-        <li><a href="#online-rl">RL 需要在线推理</a></li>
+        <li><a href="#online-rl">On-policy RL 需要持续生成新 Rollout</a></li>
         <li><a href="#ppo-grpo">PPO 和 GRPO 位于哪个环节</a></li>
-        <li><a href="#integration">为什么在线 RL 推动训推一体化</a></li>
+        <li><a href="#integration">为什么大规模 Rollout 推动训推一体化</a></li>
         <li><a href="#serving">模型训练完成后发生什么</a></li>
       </ol>
     </nav>
@@ -357,8 +357,8 @@
     </section>
 
     <section id="online-rl">
-      <div class="section-heading"><div class="number">03</div><h2>RL 需要在线推理</h2></div>
-      <p>“在线”不是指连接互联网。它表示：<strong>模型在训练过程中不断产生新的回答或行动，用这些新经验获得反馈，再继续更新权重。</strong></p>
+      <div class="section-heading"><div class="number">03</div><h2>On-policy RL 需要持续生成新 Rollout</h2></div>
+      <p>“在线”不是指连接互联网。这里讨论的是常见的 <strong>on-policy RL</strong>：当前策略生成新的回答或行动，用这些经验计算训练信号并更新权重，再由更新后的策略生成下一批经验。这是 on-policy RL 的标准机制，并非大模型独有的新算法。</p>
 
       <div class="process-chart" role="img" aria-label="在线 RL 每一轮都用当前模型生成新经验，再训练出下一版本">
         <div class="process-node"><strong>模型 θ₀</strong><small>生成第 1 批经验</small></div>
@@ -422,9 +422,9 @@
         <div class="loop-back" aria-hidden="true"></div>
       </div>
 
-      <div class="note"><strong>为什么不直接用普通训练程序？</strong>普通 SFT 可以事先准备好数据后连续训练。在线 RL 的训练数据却由模型现场生成，而且权重不断变化，所以系统必须反复完成“生成 → 评分 → 更新 → 同步新权重”。</div>
+      <div class="note"><strong>为什么不直接用普通训练程序？</strong>SFT 和 RL 训练都会执行前向计算、计算损失并反向传播；关键区别在于数据从哪里来。SFT 通常使用预先准备的示范数据，而 on-policy RL 必须让当前策略持续采样新的 Rollout，再完成“生成 → 评分 → 更新 → 同步新权重”。</div>
 
-      <p>这就是“训推一体化”要解决的问题：不是把训练和推理混成同一件事，而是让两者顺畅接力：</p>
+      <p>这就是“训推一体化”要解决的问题：它不是发明一种不同于传统 RL 的更新逻辑，也不是把训练和推理混成同一件事，而是让大模型规模下的 Rollout 生成、评分、训练和权重同步高效接力：</p>
       <div class="cards">
         <article class="card serving"><h3>推理端交出 Rollout</h3><p>把模型刚生成的回答、行动过程和相关训练信息交给评分与训练环节。</p></article>
         <article class="card training"><h3>训练端交回新权重</h3><p>PPO/GRPO 根据奖励更新模型，再把新权重交回推理端开始下一轮。</p></article>
@@ -463,7 +463,7 @@
           </tbody>
         </table>
       </div>
-      <div class="conclusion"><strong>完整链条</strong>SFT/RLHF/RL 负责在发布前后训练阶段改变模型；在线 RL 借助推理引擎生成 Rollout；PPO/GRPO 把奖励转成权重更新；训推一体化让这套循环高效运行；训练结束后，选定的权重快照再交给 SGLang/vLLM 做生产服务。</div>
+      <div class="conclusion"><strong>完整链条</strong>SFT 和基于 RL 的后训练方法会改变模型权重；RLHF 是利用人类反馈进行对齐的范式，其中经典流程可以使用 RL。On-policy RL 借助推理引擎生成新 Rollout；PPO/GRPO 把奖励转成权重更新；训推一体化解决的是这套标准循环在大模型规模下的系统效率。训练结束后，选定的权重快照再交给 SGLang/vLLM 做生产服务。</div>
     </section>
 
     <aside class="summary">
