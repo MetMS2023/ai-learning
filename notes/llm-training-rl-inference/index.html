@@ -68,7 +68,7 @@
       font-size: 17px;
       line-height: 1.8;
     }
-    main { width: min(100% - 32px, 1162px); margin: 0 auto; padding: 56px 0 80px; }
+    main { width: min(100% - 32px, 1162px); margin: 0 auto; padding: 28px 0 80px; }
     .page-shell { display: grid; grid-template-columns: 270px minmax(0, 860px); gap: 32px; align-items: start; }
     .article-column { min-width: 0; }
     header { display: grid; gap: 18px; padding-bottom: 34px; border-bottom: 1px solid var(--border); }
@@ -87,9 +87,10 @@
     nav ol { display: grid; gap: 6px; padding-left: 22px; }
     nav a { color: var(--text); text-decoration: none; }
     nav a:hover { color: var(--primary); }
-    .utility-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 1rem; font-size: .9rem; }
-    .utility-bar a { text-decoration: none; }
-    .navigation-grid { position: sticky; top: 24px; display: grid; grid-template-columns: 1fr; gap: 16px; max-height: calc(100vh - 48px); overflow-y: auto; align-items: start; }
+    .header-top { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .language-switch { flex: 0 0 auto; font-size: .9rem; }
+    .language-switch a { text-decoration: none; }
+    .navigation-grid { position: sticky; top: 28px; display: grid; grid-template-columns: 1fr; gap: 16px; max-height: calc(100vh - 56px); overflow-y: auto; align-items: start; }
     .navigation-grid nav { margin-top: 0; }
     .note-library { padding: 22px 24px; border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow); }
     .note-library strong { display: block; margin-bottom: 10px; }
@@ -256,7 +257,7 @@
     footer { display: grid; gap: 14px; margin-top: 52px; padding-top: 28px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.9rem; }
     footer ul { display: grid; gap: 6px; }
     @media (max-width: 700px) {
-      main { width: min(100% - 24px, 860px); padding-top: 36px; }
+      main { width: min(100% - 24px, 860px); padding-top: 24px; }
       .cards { grid-template-columns: 1fr; }
       section { padding-top: 42px; }
       .section-heading { grid-template-columns: 1fr; }
@@ -288,11 +289,10 @@
 </head>
 <body>
   <main>
-    <div class="utility-bar"><a href="../../">← 全部笔记</a><span><strong>中文</strong>&nbsp;·&nbsp;<a href="./en/" hreflang="en">English</a></span></div>
     <div class="page-shell">
     <div class="navigation-grid">
     <nav aria-label="文章目录">
-      <strong>学习目录</strong>
+      <strong>笔记目录</strong>
       <ol>
         <li><a href="#lifecycle">大模型从训练到上线的生命周期</a></li>
         <li><a href="#stages">预训练、SFT 和 RL 分别解决什么问题</a></li>
@@ -313,7 +313,7 @@
     </div>
       <article class="article-column">
     <header>
-      <div class="eyebrow">Fact-checked Learning Notes · LLM Systems</div>
+      <div class="header-top"><div class="eyebrow">Fact-checked Learning Notes · LLM Systems</div><div class="language-switch"><strong>中文</strong>&nbsp;·&nbsp;<a href="./en/" hreflang="en">English</a></div></div>
       <h1>大模型训练、RL Rollout 与训推一体化</h1>
       <p class="lead">这份笔记梳理大模型从预训练、后训练到上线服务的完整生命周期，重点理解 on-policy RL 为什么要持续生成新 Rollout、PPO/GRPO 位于哪个环节，以及“训推一体化”究竟解决什么问题。</p>
       <div class="thesis">核心认识：当前策略生成 Rollout、更新权重、再生成下一批经验，是 on-policy RL 的标准机制。大模型领域的特殊挑战，主要在于如何以极大规模高效完成生成、评分、训练与权重同步。</div>
