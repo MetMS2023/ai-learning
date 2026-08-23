@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="经过事实核查、清晰易懂的 AI 学习笔记。">
-  <title>AI Learning · 学习笔记</title>
+  <meta name="description" content="Fact-checked, accessible learning notes about AI systems and research.">
+  <title>AI Learning · Knowledge Notes</title>
   <style>
     :root {
       --bg:#f5f8fb;--surface:#fff;--surface-alt:#edf4f8;--text:#183247;
@@ -19,12 +19,12 @@
       --bg:#0f1b24;--surface:#172631;--surface-alt:#1d313e;--text:#e3edf2;
       --muted:#a6bac6;--border:#304754;--primary:#59c4dc;--primary-soft:#163d48;--shadow:none
     }
-    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.75}
     main{width:min(100% - 32px,920px);margin:auto;padding:72px 0 96px}
     .language-switch{display:flex;justify-content:flex-end;margin-bottom:1rem;font-size:.9rem}.language-switch a{color:var(--primary)}
     header{display:grid;gap:18px;padding-bottom:40px;border-bottom:1px solid var(--border)}
     .eyebrow{color:var(--primary);font:700 .78rem ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase}
-    h1,h2,h3,p{margin:0}h1{max-width:720px;font:700 clamp(2.4rem,7vw,4.5rem)/1.15 "Songti SC",STSong,serif;letter-spacing:-.035em;text-wrap:balance}
+    h1,h2,h3,p{margin:0}h1{max-width:720px;font:700 clamp(2.4rem,7vw,4.5rem)/1.1 Georgia,"Times New Roman",serif;letter-spacing:-.035em;text-wrap:balance}
     .lead{max-width:680px;color:var(--muted);font-size:1.08rem}.principles{display:flex;flex-wrap:wrap;gap:8px}.principles span{padding:5px 10px;border:1px solid var(--border);background:var(--surface-alt);font-size:.84rem}
     section{display:grid;gap:18px;padding-top:48px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
     article{display:grid;gap:14px;padding:24px;border-top:4px solid var(--primary);background:var(--surface);box-shadow:var(--shadow)}
@@ -37,29 +37,29 @@
 </head>
 <body>
   <main>
-    <div class="language-switch"><strong>中文</strong>&nbsp;·&nbsp;<a href="./en/" hreflang="en">English</a></div>
+    <div class="language-switch"><a href="../" hreflang="zh-CN">中文</a>&nbsp;·&nbsp;<strong>English</strong></div>
     <header>
       <div class="eyebrow">AI Learning · Knowledge Notes</div>
-      <h1>跟上 AI 的脚步，一点一点学懂</h1>
-      <p class="lead">这是我在快速变化的 AI 领域持续学习时整理的个人笔记。每篇先弄清核心机制，再对照可靠来源核实，并逐步补充真正需要的细节。</p>
-      <div class="principles"><span>清晰易懂</span><span>权威来源</span><span>动态流程图</span><span>不过度引入概念</span></div>
+      <h1>Keeping Up with AI, One Concept at a Time</h1>
+      <p class="lead">Personal notes from my effort to keep learning in a fast-moving field. Each article starts with the core mechanism, checks it against reliable sources, and adds only the detail needed to make sense of it.</p>
+      <div class="principles"><span>Beginner-friendly</span><span>Primary sources</span><span>Visual explanations</span><span>Minimal jargon</span></div>
     </header>
 
     <section aria-labelledby="notes-title">
-      <h2 id="notes-title">学习笔记</h2>
+      <h2 id="notes-title">Learning notes</h2>
       <div class="grid">
         <article>
           <div class="meta">TEST-TIME LEARNING · 2026-08-14</div>
-          <h3>Test-Time Training：让 LLM 在使用时继续学习</h3>
-          <p>从 TTT 的目标、Transformer 架构和权重更新机制出发，理解 Inner/Outer loop、Meta-learning、LoRA、遗忘风险及未来可能的产品形态。</p>
-          <a href="./notes/test-time-training/">阅读笔记 <span class="arrow">→</span></a>
+          <h3>Test-Time Training: Teaching LLMs While They Work</h3>
+          <p>Understand TTT through its purpose, Transformer architecture, weight updates, inner and outer loops, meta-learning, LoRA, forgetting risks, and possible product architectures.</p>
+          <a href="../notes/test-time-training/en/">Read note <span class="arrow">→</span></a>
         </article>
 
         <article>
           <div class="meta">LLM SYSTEMS · 2026-08-11</div>
-          <h3>大模型训练、RL Rollout 与训推一体化</h3>
-          <p>从预训练、SFT、RLHF 和 RL 出发，理解 Rollout、PPO/GRPO、权重更新，以及训练结束后如何交给 SGLang/vLLM 服务用户。</p>
-          <a href="./notes/llm-training-rl-inference/">阅读笔记 <span class="arrow">→</span></a>
+          <h3>LLM Training, RL Rollouts, and Training–Inference Integration</h3>
+          <p>Follow the lifecycle from pre-training and post-training to on-policy rollouts, PPO/GRPO weight updates, training–inference integration, and production serving with SGLang or vLLM.</p>
+          <a href="../notes/llm-training-rl-inference/en/">Read note <span class="arrow">→</span></a>
         </article>
       </div>
     </section>
