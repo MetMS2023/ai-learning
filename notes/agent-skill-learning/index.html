@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="理解 Agent Skill 应用如何从人工编写，发展到基于轨迹提出改进，再通过评测门持续进化。">
+  <title>Agent Skill 应用趋势：从人工编写到可验证的持续进化</title>
+  <style>
+    :root{
+      --bg:#f4f7f9;--surface:#fff;--surface-alt:#edf3f6;--text:#183247;--muted:#5b7180;
+      --border:#cfdee6;--primary:#087d91;--primary-soft:#dcf3f5;--blue:#3878b7;--blue-soft:#e6f0fb;
+      --orange:#b76516;--orange-soft:#fff0df;--green:#237653;--green-soft:#e4f5ec;--red:#b4423b;
+      --red-soft:#fbe8e6;--shadow:0 12px 34px rgba(26,63,84,.08)
+    }
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+      --bg:#0e1921;--surface:#162631;--surface-alt:#1d303c;--text:#e2edf2;--muted:#a5bac5;
+      --border:#304754;--primary:#59c4d5;--primary-soft:#173d47;--blue:#8bb8e8;--blue-soft:#20364d;
+      --orange:#f0a258;--orange-soft:#422d1b;--green:#73d3a9;--green-soft:#173c30;--red:#f19b94;
+      --red-soft:#482524;--shadow:none
+    }}
+    :root[data-theme="dark"]{
+      --bg:#0e1921;--surface:#162631;--surface-alt:#1d303c;--text:#e2edf2;--muted:#a5bac5;
+      --border:#304754;--primary:#59c4d5;--primary-soft:#173d47;--blue:#8bb8e8;--blue-soft:#20364d;
+      --orange:#f0a258;--orange-soft:#422d1b;--green:#73d3a9;--green-soft:#173c30;--red:#f19b94;
+      --red-soft:#482524;--shadow:none
+    }
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:17px;line-height:1.8}
+    main{width:min(100% - 32px,1200px);margin:auto;padding:28px 0 88px}.page-shell{display:grid;grid-template-columns:270px minmax(0,898px);gap:32px;align-items:start}.article-column{min-width:0}
+    header{display:grid;gap:18px;padding-bottom:36px;border-bottom:1px solid var(--border)}.header-top{display:flex;align-items:center;justify-content:space-between;gap:18px}.eyebrow{color:var(--primary);font:700 .78rem ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase}.date{flex:0 0 auto;color:var(--muted);font-size:.82rem}
+    h1,h2,h3,p,ul,ol,blockquote,table{margin:0}h1,h2,h3{text-wrap:balance;line-height:1.35}h1{max-width:840px;font:700 clamp(2.05rem,5vw,3.65rem)/1.16 "Songti SC",STSong,serif;letter-spacing:-.035em}h2{font-size:clamp(1.45rem,3vw,1.95rem)}h3{font-size:1.08rem}a{color:var(--primary);text-underline-offset:4px}.lead{max-width:790px;color:var(--muted);font-size:1.08rem}.thesis{padding:18px 20px;border-left:4px solid var(--primary);background:var(--primary-soft);font-weight:650}
+    .sidebar{position:sticky;top:28px;display:grid;gap:16px;max-height:calc(100vh - 56px);overflow-y:auto}.sidebar nav,.library{padding:21px 22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.sidebar strong{display:block;margin-bottom:9px}.sidebar ol{display:grid;gap:5px;padding-left:20px;font-size:.92rem}.sidebar a{color:var(--text);text-decoration:none}.sidebar a:hover{color:var(--primary)}.library ul{display:grid;gap:8px;padding:0;list-style:none;font-size:.9rem}.library li{padding-bottom:8px;border-bottom:1px solid var(--border)}.library li:last-child{border:0;padding:0}
+    section{display:grid;gap:20px;padding-top:54px}.section-heading{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start}.number{display:grid;width:34px;height:34px;place-items:center;border:1px solid var(--primary);color:var(--primary);font:700 .82rem ui-monospace,Menlo,monospace}.note,.warning,.conclusion{padding:18px 20px;border:1px solid var(--border);background:var(--surface-alt)}.note strong,.warning strong,.conclusion strong{display:block;margin-bottom:4px}.warning{border-color:var(--orange);background:var(--orange-soft)}.conclusion{border-color:var(--green);background:var(--green-soft)}
+    .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.cards.two-by-two{grid-template-columns:repeat(2,minmax(0,1fr))}.card{display:grid;align-content:start;gap:9px;padding:19px;border-top:4px solid var(--primary);background:var(--surface);box-shadow:var(--shadow)}.card.blue{border-color:var(--blue)}.card.orange{border-color:var(--orange)}.card.green{border-color:var(--green)}.card.red{border-color:var(--red)}.card p,.card li{color:var(--muted);font-size:.93rem}.card ul{display:grid;gap:5px;padding-left:18px}
+    .process{display:flex;align-items:stretch;width:100%;padding:21px;overflow-x:auto;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.step{display:grid;flex:1 0 126px;min-height:104px;align-content:center;justify-items:center;gap:5px;padding:13px 10px;border:1px solid var(--border);background:var(--surface-alt);text-align:center}.step strong{line-height:1.35}.step small{color:var(--muted);line-height:1.45}.step.active{border-color:var(--primary);background:var(--primary-soft)}.step.safe{border-color:var(--green);background:var(--green-soft)}.step.warn{border-color:var(--orange);background:var(--orange-soft)}
+    .arrow{position:relative;flex:0 0 38px;min-width:38px}.arrow:before{content:"";position:absolute;top:50%;left:4px;right:8px;height:2px;background:var(--border)}.arrow:after{content:"";position:absolute;top:calc(50% - 5px);right:5px;width:9px;height:9px;border-top:2px solid var(--primary);border-right:2px solid var(--primary);transform:rotate(45deg)}.arrow span{position:absolute;top:calc(50% - 3px);left:4px;width:7px;height:7px;border-radius:50%;background:var(--primary);animation:travel 2.2s ease-in-out infinite}@keyframes travel{from{transform:translateX(0);opacity:.15}50%{opacity:1}to{transform:translateX(22px);opacity:.15}}
+    .loop{display:grid;grid-template-columns:repeat(4,1fr);gap:34px 14px;padding:21px 21px 58px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);position:relative}.loop .step{position:relative}.loop .step:not(:last-of-type):after{content:"→";position:absolute;right:-26px;top:50%;color:var(--primary);font-size:1.25rem;transform:translateY(-50%)}.loop-back{position:absolute;left:9%;right:9%;bottom:20px;height:24px;border-right:2px solid var(--primary);border-bottom:2px solid var(--primary);border-left:2px solid var(--primary);border-radius:0 0 14px 14px}.loop-back:after{content:"";position:absolute;left:-5px;top:-2px;width:8px;height:8px;border-top:2px solid var(--primary);border-left:2px solid var(--primary);transform:rotate(45deg)}.loop-back span{position:absolute;left:50%;bottom:-14px;padding:0 7px;background:var(--surface);color:var(--primary);font:700 .72rem ui-monospace,Menlo,monospace;transform:translateX(-50%)}
+    .comparison{overflow-x:auto}.comparison table{width:100%;min-width:700px;border-collapse:collapse;background:var(--surface);box-shadow:var(--shadow)}th,td{padding:13px 14px;border:1px solid var(--border);vertical-align:top;text-align:left}th{background:var(--surface-alt)}td{font-size:.93rem}.tag{display:inline-block;padding:2px 7px;border:1px solid var(--border);background:var(--surface-alt);font:700 .73rem ui-monospace,Menlo,monospace}.tag.now{color:var(--green);border-color:var(--green)}.tag.emerging{color:var(--orange);border-color:var(--orange)}.tag.research{color:var(--blue);border-color:var(--blue)}
+    .levels{display:grid;gap:10px}.level{display:grid;grid-template-columns:132px 1fr 190px;gap:14px;align-items:center;padding:15px 17px;border:1px solid var(--border);background:var(--surface)}.level .scope{color:var(--primary);font-weight:750}.level .gate{color:var(--muted);font-size:.9rem}.formula{padding:18px 20px;overflow-x:auto;border:1px solid var(--border);background:var(--surface);font:650 .9rem/1.8 ui-monospace,Menlo,monospace;white-space:nowrap}
+    .skillopt-figure{max-width:100%;margin:0;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.figure-scroll{max-width:100%;overflow-x:auto;background:#0b1119}.skillopt-figure a{display:block}.skillopt-figure img{display:block;width:100%;height:auto}.skillopt-figure figcaption{padding:13px 16px;color:var(--muted);font-size:.88rem;line-height:1.65}.skillopt-figure figcaption strong{color:var(--text)}
+    footer{display:grid;gap:14px;margin-top:54px;padding-top:28px;border-top:1px solid var(--border);color:var(--muted);font-size:.9rem}footer ol{display:grid;gap:8px;padding-left:22px}footer a{overflow-wrap:anywhere}
+    @media(max-width:960px){main{width:min(100% - 24px,898px);padding-top:24px}.page-shell{display:block}.sidebar{position:static;max-height:none;margin-top:28px;overflow:visible}.article-column{display:flex;flex-direction:column}.sidebar{order:2}.article-column{order:1}.cards{grid-template-columns:1fr 1fr}.level{grid-template-columns:1fr}.loop{grid-template-columns:1fr;gap:30px;padding-bottom:54px}.loop .step:not(:last-of-type):after{right:50%;top:auto;bottom:-28px;transform:translate(50%,0) rotate(90deg)}}
+    @media(max-width:650px){.header-top{align-items:flex-start;flex-direction:column;gap:5px}.cards{grid-template-columns:1fr}.process{flex-direction:column;overflow:visible}.arrow{flex-basis:34px;min-width:0;min-height:34px}.arrow:before{top:4px;bottom:8px;left:50%;right:auto;width:2px;height:auto}.arrow:after{top:auto;right:auto;bottom:5px;left:calc(50% - 5px);transform:rotate(135deg)}.arrow span{top:4px;left:calc(50% - 3px);animation-name:down}.skillopt-figure.dense img{width:720px;max-width:none}@keyframes down{from{transform:translateY(0);opacity:.15}50%{opacity:1}to{transform:translateY(20px);opacity:.15}}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.arrow span{animation:none}}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="page-shell">
+      <aside class="sidebar">
+        <nav aria-label="笔记目录">
+          <strong>笔记目录</strong>
+          <ol>
+            <li><a href="#skill">先理解 Skill 是什么</a></li>
+            <li><a href="#trend">真正的趋势：LLM 帮助升级 Skill</a></li>
+            <li><a href="#hermes">Hermes：Agent 管理自己的 Skill</a></li>
+            <li><a href="#skillopt">SkillOpt：用 Eval 训练 Skill</a></li>
+          </ol>
+        </nav>
+        <div class="library" aria-label="其他学习笔记">
+          <strong>AI Learning 笔记库</strong>
+          <ul>
+            <li aria-current="page">当前：Agent Skill 应用趋势</li>
+            <li><a href="../test-time-training/">Test-Time Training：让 LLM 在使用时继续学习</a></li>
+            <li><a href="../llm-training-rl-inference/">大模型训练、RL Rollout 与训推一体化</a></li>
+          </ul>
+        </div>
+      </aside>
+
+      <article class="article-column">
+        <header>
+          <div class="header-top"><div class="eyebrow">Fact-checked Learning Notes · Agent Skills</div><div class="date">2026-08-31</div></div>
+          <h1>Agent Skill 应用趋势：从人工编写到可验证的持续进化</h1>
+          <p class="lead">今天，专家或 LLM 辅助创建 Skill，以及根据 description 按需调用 Skill，都已经是常规操作。真正的新趋势是：LLM 开始帮助用户持续升级已有 Skill，并用没有参与修改的 Held-out tasks 检查改进是否真的有效。</p>
+          <div class="thesis">本文只关注一个核心趋势：<strong>Skill 从“被创建、被调用”，发展为“由 LLM 根据经历持续提出改进”</strong>。Hermes 展示了 Agent 如何主动修改 Skill；Microsoft SkillOpt 则提供一套更科学的方法，确保修改不是凭感觉，而是有轨迹证据、有更新限制，并经过 Held-out tasks 验证。</div>
+        </header>
+
+        <section id="skill">
+          <div class="section-heading"><div class="number">01</div><h2>先理解 Skill：它不是 Prompt 或 Tool</h2></div>
+          <p>Skill 是一份可按需加载的程序性知识包。最小形式是一份带元数据的 <code>SKILL.md</code>；更完整时还可包含 scripts、references、assets 和模板。开放 Agent Skills 规范要求 description 同时说明“做什么”和“什么时候使用”。<a href="#ref-spec">[1]</a></p>
+          <div class="comparison"><table>
+            <thead><tr><th>概念</th><th>主要回答</th><th>例子</th></tr></thead>
+            <tbody>
+              <tr><td>Prompt</td><td>这一次希望 Agent 完成什么？</td><td>“请根据这些材料生成本周项目报告。”</td></tr>
+              <tr><td>Tool</td><td>Agent 可以执行什么动作？</td><td>搜索文件、运行代码、调用 API。</td></tr>
+              <tr><td><strong>Skill</strong></td><td>遇到某类任务，应该按什么程序完成？</td><td>如何选择可靠来源、处理冲突、验证结果并按模板输出。</td></tr>
+            </tbody>
+          </table></div>
+          <h3>Agent 如何调用 Skill？</h3>
+          <div class="process" role="img" aria-label="Agent Skills 的渐进披露流程">
+            <div class="step"><strong>发现</strong><small>启动时只看到 name 与 description</small></div><div class="arrow"><span></span></div>
+            <div class="step active"><strong>匹配</strong><small>当前任务与某项 Skill 相关</small></div><div class="arrow"><span></span></div>
+            <div class="step warn"><strong>加载</strong><small>读取完整 SKILL.md</small></div><div class="arrow"><span></span></div>
+            <div class="step safe"><strong>执行</strong><small>按需使用脚本、参考和模板</small></div>
+          </div>
+          <div class="cards">
+            <article class="card"><h3>可组合</h3><p>一个任务可同时调用研究、表格处理和报告生成等不同 Skill。</p></article>
+            <article class="card blue"><h3>可移植</h3><p>开放格式让同一个 Skill 有机会在不同兼容 Agent 或 harness 中复用。</p></article>
+            <article class="card green"><h3>节省上下文</h3><p>先加载少量描述，确定相关后才读取详细内容，这就是 progressive disclosure。</p></article>
+          </div>
+        </section>
+
+        <section id="trend">
+          <div class="section-heading"><div class="number">02</div><h2>真正的趋势：LLM 开始帮助用户升级 Skill</h2></div>
+          <p>专家手写或让 LLM 辅助创建 Skill，已经是当前做法；Agent 根据 description 判断是否加载某项 Skill，也是标准运行机制。</p>
+          <p>真正值得关注的趋势只有一个：<strong>LLM 不再只负责使用 Skill，也开始根据执行经历帮助用户改进 Skill。</strong></p>
+          <div class="process" role="img" aria-label="LLM 根据任务经历改进 Skill 并通过独立任务验证">
+            <div class="step"><strong>Current Skill</strong><small>Agent 使用当前版本执行任务</small></div><div class="arrow"><span></span></div>
+            <div class="step active"><strong>Experience</strong><small>成功、失败、Tool 结果和用户纠正</small></div><div class="arrow"><span></span></div>
+            <div class="step warn"><strong>LLM proposes Patch</strong><small>根据证据提出有限修改</small></div><div class="arrow"><span></span></div>
+            <div class="step safe"><strong>Scientific validation</strong><small>Held-out tasks 变好才采用</small></div>
+          </div>
+          <div class="cards">
+            <article class="card orange"><h3>较直接的实现</h3><p>Agent 复盘刚完成的任务，判断哪些办法值得保留，然后主动 Create 或 Patch Skill。Hermes 展示了这种产品机制。</p></article>
+            <article class="card green"><h3>更科学的实现</h3><p>系统收集多次 Rollout，用受限制的编辑方式产生候选版本，再通过 Held-out tasks 比较决定是否接受。SkillOpt 为同一个趋势增加了方法论和验证纪律。</p></article>
+            <article class="card blue"><h3>两者的共同目标</h3><p>都不是让 LLM 随意重写 Skill，而是让已有 Skill 能根据真实执行经历不断变得更有效。</p></article>
+          </div>
+        </section>
+
+        <section id="hermes">
+          <div class="section-heading"><div class="number">03</div><h2>Hermes：Agent 开始管理自己的 Skill</h2></div>
+          <h3>Hermes 和 <code>skill_manage</code> 是什么？</h3>
+          <p>Hermes Agent 是与 OpenClaw 同一大类的<strong>开源 Agent harness / runtime</strong>：它不是基础模型，而是把模型、Tools、Skills、终端、记忆和会话运行机制组织起来的 Agent 系统。两者属于同一产品类别，但具体架构和功能并不相同。<code>skill_manage</code> 是 Hermes harness 提供的内置技能管理 Tool，不是 LLM 天生自带的能力。模型决定何时调用它，Hermes 负责把 Tool Call 变成对 Skill 文件的实际创建、修改或删除。<a href="#ref-hermes">[2]</a><a href="#ref-openclaw">[5]</a></p>
+          <div class="note"><strong>一句话理解</strong>LLM 负责判断“这段经验是否值得保存、应该怎样改”；<code>skill_manage</code> 负责真正操作 Skill 文件。</div>
+
+          <h3>Hermes 认为什么情况值得保存？</h3>
+          <div class="cards">
+            <article class="card"><h3>复杂流程成功</h3><p>Agent 刚完成一个以后可能重复出现的多步骤工作流。</p></article>
+            <article class="card orange"><h3>从失败中找到出路</h3><p>Agent 走过错误路径或遇到工具失败，最终找到可靠办法。</p></article>
+            <article class="card blue"><h3>用户明确纠正</h3><p>用户指出原做法错误，并给出更准确的步骤或判断条件。</p></article>
+          </div>
+
+          <h3><code>skill_manage</code> 可以执行哪些动作？</h3>
+          <div class="comparison"><table>
+            <thead><tr><th>动作</th><th>Agent 何时可能调用</th><th>执行方式</th></tr></thead>
+            <tbody>
+              <tr><td>Create</td><td>第一次形成新的可复用流程</td><td>Agent 发起 Tool Call，创建完整 SKILL.md。</td></tr>
+              <tr><td><strong>Patch</strong></td><td>只需修改一个具体规则或步骤</td><td>Agent 提供 old/new string；Hermes 官方优先建议这种更新。</td></tr>
+              <tr><td>Edit</td><td>原结构已经不适用，需要整体重写</td><td>Agent 提供新的完整内容并替换旧版本。</td></tr>
+              <tr><td>Write / remove file</td><td>需要增加或移除脚本、模板、参考文件</td><td>Agent 管理 Skill 目录中的支持文件。</td></tr>
+              <tr><td>Delete</td><td>Skill 已过期、错误或被另一项 Skill 取代</td><td>Agent 请求删除整项 Skill。</td></tr>
+            </tbody>
+          </table></div>
+          <div class="note"><strong>动作执行与技能变更审批</strong><p>这些动作都可由 Agent 主动调用，不需要人工逐项操作，也不会在每轮按固定顺序发生。只有当 Agent 判断需要创建、修改或删除 Skill 时才会调用。默认配置下，Hermes 收到 Tool Call 后直接执行；如果开启“技能变更审批”，修改会先暂存，等待用户查看 Diff 后批准或拒绝。</p></div>
+
+          <h3>Hermes 到底从什么内容中学习？</h3>
+          <p>Hermes 文档描述了三种入口：</p>
+          <div class="cards">
+            <article class="card green"><h3>当前任务中直接保存</h3><p>Agent 在当前上下文中刚解决了复杂流程、经历失败恢复或收到用户纠正，因此可以立即调用 <code>skill_manage</code>。</p></article>
+            <article class="card blue"><h3>Turn 结束后的后台复盘</h3><p>Hermes 的 background self-improvement review 会在一轮结束后检查刚才的经历，并可建议或暂存 Skill 修改。</p></article>
+            <article class="card"><h3>用户显式调用 <code>/learn</code></h3><p>用户可以让 Hermes 从本地资料、网页、粘贴笔记，或“我们刚才完成的工作流”中制作 Skill。</p></article>
+          </div>
+          <div class="process" role="img" aria-label="Hermes 从当前会话经历到技能变更的真实流程">
+            <div class="step"><strong>当前上下文</strong><small>多轮对话、Tool 结果、错误、纠正</small></div><div class="arrow"><span></span></div>
+            <div class="step active"><strong>Agent 判断</strong><small>是否形成值得复用的程序</small></div><div class="arrow"><span></span></div>
+            <div class="step warn"><strong>skill_manage</strong><small>Create / Patch / Edit 等</small></div><div class="arrow"><span></span></div>
+            <div class="step safe"><strong>直接应用或暂存</strong><small>取决于技能变更审批设置</small></div>
+          </div>
+          <div class="note"><strong>多轮对话与用户同意</strong>当前多轮对话和 Tool 结果本来就在 Agent 的上下文中，因此可能影响它生成的 Skill；Hermes 文档没有描述面向企业客户的独立 consent 管理或跨用户数据汇总机制。若产品要额外保存、离线分析或跨会话复用用户活动，应明确告知并取得适当同意，同时处理保留期限、敏感信息和访问范围。这是部署层责任，不是 Hermes 已经解决的能力。</div>
+        </section>
+
+        <section id="skillopt">
+          <div class="section-heading"><div class="number">04</div><h2>Microsoft SkillOpt：用 Eval 把 Skill 修改变成受控训练</h2></div>
+          <h3>先简单理解 SkillOpt</h3>
+          <p>SkillOpt 是 Microsoft Research 提出的一种<strong>类深度学习、但直接作用于自然语言 Skill 文档</strong>的文本空间优化方法。目标 Agent 和底层模型保持冻结，另一个 optimizer model 分析带分数的任务轨迹（rollouts），对工作中的 <code>skill.md</code> 提出有限的增、删、改；候选版本只有在 Held-out tasks 上严格优于当前版本时才会被接受。<a href="#ref-skillopt">[3]</a><a href="#ref-skillopt-project">[4]</a></p>
+          <figure class="skillopt-figure dense">
+            <div class="figure-scroll"><a href="assets/skillopt-concept-analogy.png" target="_blank" rel="noopener" aria-label="打开 SkillOpt 文本空间类比原图"><img src="assets/skillopt-concept-analogy.png" width="1398" height="776" loading="lazy" decoding="async" alt="SkillOpt 将深度学习中的参数、梯度、学习率和验证，类比为 skill.md、编辑方向、编辑预算和 Held-out gate"></a></div>
+            <figcaption><strong>图 1｜SkillOpt 的文本空间类比。</strong>它把 <code>skill.md</code> 视为待优化的文本参数，以轨迹反思产生编辑方向，以 edit budget 控制更新幅度，再由 Held-out gate 决定是否接受。这里是方法类比，并不表示对底层模型参数进行梯度训练；图中的 “optimal” 也不代表已经证明全局最优。</figcaption>
+          </figure>
+          <div class="note"><strong><code>skill.md</code> 与 <code>best_skill.md</code></strong><p><code>skill.md</code> 是优化过程中持续被编辑的工作文本；<code>best_skill.md</code> 是经过验证后保存的当前最佳版本。它们承担 SKILL.md 的指令角色，但论文和开源实现并没有同时自动优化完整 Agent Skills Package 里的 scripts、references 和 assets；这些附带资源需要保持固定，或由其他机制管理。</p></div>
+          <div class="note"><strong>Held-out tasks 是什么？</strong><p>SkillOpt 会把任务分成两部分：一部分用于执行 Rollout、分析问题和修改 Skill；另一部分不参与修改，只用于测试候选 Skill。后一部分就是 Held-out tasks。它们相当于一套 Agent 没有用来“复习和改答案”的独立考题，可以检查修改是否真的能够迁移到新任务。</p></div>
+
+          <h3>SkillOpt 的四步主循环</h3>
+          <div class="loop" role="img" aria-label="SkillOpt 的 Rollout、反思、有限编辑与验证闭环">
+            <div class="step"><strong>1 · Rollout</strong><small>当前 Skill 执行一批训练任务</small></div>
+            <div class="step active"><strong>2 · Reflect</strong><small>分别分析成功与失败轨迹</small></div>
+            <div class="step warn"><strong>3 · Bounded edit</strong><small>合并、去重并限制修改量</small></div>
+            <div class="step safe"><strong>4 · Validation gate</strong><small>Held-out tasks 严格变好才接受</small></div>
+            <div class="loop-back"><span>accepted skill → 下一轮</span></div>
+          </div>
+          <figure class="skillopt-figure dense">
+            <div class="figure-scroll"><a href="assets/skillopt-training-loop.png" target="_blank" rel="noopener" aria-label="打开 SkillOpt 完整训练循环原图"><img src="assets/skillopt-training-loop.png" width="1098" height="796" loading="lazy" decoding="async" alt="SkillOpt 从 skill.md 经 Rollout batch、minibatch reflection、bounded update、proposed skill 到 Held-out check 的完整循环"></a></div>
+            <figcaption><strong>图 2｜SkillOpt 的完整更新循环。</strong>原图展开为六个节点，是因为它把当前 <code>skill.md</code> 和验证前的 proposed skill 也分别画出；正文的四步则按核心优化动作归纳为 Rollout、Reflect、Bounded edit 和 Validation，两种表达并不矛盾。</figcaption>
+          </figure>
+
+          <h3>每一步具体发生什么？</h3>
+          <div class="comparison"><table>
+            <thead><tr><th>步骤</th><th>输入</th><th>输出 / 控制</th></tr></thead>
+            <tbody>
+              <tr><td>Rollout</td><td>当前 Skill + 一批训练任务</td><td>完整任务轨迹：消息、Tool Call、观察、结果和分数。</td></tr>
+              <tr><td>Reflect</td><td>成功轨迹与失败轨迹</td><td>分别找出应保留的有效行为和应修复的重复问题。</td></tr>
+              <tr><td>Bounded edit</td><td>多个 add / delete / replace 建议</td><td>合并、去重、排序，并用编辑预算限制更新幅度。</td></tr>
+              <tr><td>Validation</td><td>当前 Skill 与候选 Skill</td><td>在没有参与编辑的 held-out tasks 上比较；严格改善才接受。</td></tr>
+            </tbody>
+          </table></div>
+
+          <h3>Held-out tasks 为什么是关键？</h3>
+          <p>如果用产生修改的同一批案例评价候选 Skill，系统很容易只记住这些案例。Held-out tasks 没有参与编辑，更能检验改动是否真正迁移。</p>
+          <div class="process" role="img" aria-label="当前 Skill 与候选 Skill 在 Held-out tasks 上比较">
+            <div class="step"><strong>Current skill</strong><small>在 Held-out tasks 上跑基线</small></div><div class="arrow"><span></span></div>
+            <div class="step warn"><strong>Candidate skill</strong><small>在相同任务和环境中执行</small></div><div class="arrow"><span></span></div>
+            <div class="step active"><strong>Compare scores</strong><small>成功率、约束、成本等</small></div><div class="arrow"><span></span></div>
+            <div class="step safe"><strong>Accept / reject</strong><small>严格改善才晋升</small></div>
+          </div>
+          <div class="comparison"><table>
+            <thead><tr><th>评测维度</th><th>要回答的问题</th></tr></thead>
+            <tbody>
+              <tr><td>任务成功</td><td>候选 Skill 是否更稳定地完成目标？</td></tr>
+              <tr><td>约束遵守</td><td>是否遵守格式、安全、工具和业务边界？</td></tr>
+              <tr><td>迁移能力</td><td>换任务、模型或 Agent harness 后是否仍有帮助？</td></tr>
+              <tr><td>成本与延迟</td><td>是否为了少量准确率增加过多 Tool Call 或 Token？</td></tr>
+              <tr><td>回归</td><td>修复一个失败时，是否破坏原本能完成的任务？</td></tr>
+            </tbody>
+          </table></div>
+          <div class="note"><strong>自动修改还需要科学验证</strong><p>Hermes 公开实现中的质量控制主要是会话复盘、结构校验、Lint、可选安全扫描和技能变更审批；这些机制帮助 Agent 修改 Skill，但不会自动证明修改提升了任务表现。SkillOpt 用 Held-out tasks 补充了这个性能验证环节。现有公开资料没有显示 Hermes 已集成 SkillOpt 式评测。<a href="#ref-hermes-manager">[6]</a><a href="#ref-hermes-review">[7]</a></p></div>
+          <figure class="skillopt-figure dense">
+            <div class="figure-scroll"><a href="assets/skillopt-transfer-evidence.png" target="_blank" rel="noopener" aria-label="打开 SkillOpt 迁移实验示意原图"><img src="assets/skillopt-transfer-evidence.png" width="1428" height="758" loading="lazy" decoding="async" alt="同一份 best_skill.md 在跨模型、跨 Agent harness 和跨 benchmark 三种实验中的迁移示意"></a></div>
+            <figcaption><strong>图 3｜论文测试的三种 Skill 迁移方向。</strong>同一份 <code>best_skill.md</code> 被用于 cross-model、cross-harness 和 cross-benchmark 实验。图中的 +5.6、+29.4 和 +2.3 是对应特定实验设置与目标基线的结果，不是 SkillOpt 在所有任务上的通用收益。</figcaption>
+          </figure>
+          <div class="warning"><strong>研究结果边界</strong>SkillOpt 报告在 6 个 benchmark、7 个目标模型和 3 种执行方式的 52 个评测单元中达到最好或并列最好，并展示跨模型与跨 harness 迁移。这些是研究 benchmark，不是所有真实应用都能获得同样收益的保证。</div>
+        </section>
+
+
+
+        <footer>
+          <strong>主要来源</strong>
+          <ol>
+            <li id="ref-spec"><a href="https://agentskills.io/">Agent Skills Open Standard</a>：Skill 目录、SKILL.md 与 progressive disclosure。</li>
+            <li id="ref-hermes"><a href="https://hermes-agent.nousresearch.com/">Hermes Agent · Skills System</a>：skill_manage、/learn、后台复盘与技能变更审批。</li>
+            <li id="ref-skillopt"><a href="https://arxiv.org/abs/2605.23904">SkillOpt: Executive Strategy for Self-Evolving Agent Skills</a>：受控文本优化、Held-out tasks 验证与最佳版本选择。</li>
+            <li id="ref-skillopt-project"><a href="https://microsoft.github.io/SkillOpt/">Microsoft SkillOpt Project</a>：方法、代码与 SkillOpt-Sleep preview。</li>
+            <li id="ref-openclaw"><a href="https://docs.openclaw.ai/">OpenClaw Docs</a>：OpenClaw 作为开源 Agent harness / runtime 的产品边界。</li>
+            <li id="ref-hermes-manager"><a href="https://github.com/NousResearch/hermes-agent/blob/main/tools/skill_manager_tool.py">Hermes skill_manager_tool.py</a>：skill_manage 的结构校验、Lint、安全扫描与文件操作实现。</li>
+            <li id="ref-hermes-review"><a href="https://github.com/NousResearch/hermes-agent/blob/main/agent/background_review.py">Hermes background_review.py</a>：conversation snapshot 重放与后台 Skill / memory 复盘实现。</li>
+          </ol>
+          <p>证据说明：Hermes、Agent Skills 与 OpenClaw 部分来自产品、规范和公开源码；SkillOpt 的结论来自论文评测。文中对 Hermes 会话数据与 consent 的说明，只陈述官方资料公开到的边界，不推断其未披露的实现。</p>
+        </footer>
+      </article>
+    </div>
+  </main>
+</body>
+</html>
