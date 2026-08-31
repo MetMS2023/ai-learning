@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="How Agent Skills are evolving from authored instructions into experience-driven, evaluation-gated capabilities.">
+  <title>Agent Skill Evolution: From Authored Instructions to Validated Improvement</title>
+  <style>
+    :root{
+      --bg:#f4f7f9;--surface:#fff;--surface-alt:#edf3f6;--text:#183247;--muted:#5b7180;
+      --border:#cfdee6;--primary:#087d91;--primary-soft:#dcf3f5;--blue:#3878b7;--blue-soft:#e6f0fb;
+      --orange:#b76516;--orange-soft:#fff0df;--green:#237653;--green-soft:#e4f5ec;--red:#b4423b;
+      --red-soft:#fbe8e6;--shadow:0 12px 34px rgba(26,63,84,.08)
+    }
+    @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+      --bg:#0e1921;--surface:#162631;--surface-alt:#1d303c;--text:#e2edf2;--muted:#a5bac5;
+      --border:#304754;--primary:#59c4d5;--primary-soft:#173d47;--blue:#8bb8e8;--blue-soft:#20364d;
+      --orange:#f0a258;--orange-soft:#422d1b;--green:#73d3a9;--green-soft:#173c30;--red:#f19b94;
+      --red-soft:#482524;--shadow:none
+    }}
+    :root[data-theme="dark"]{
+      --bg:#0e1921;--surface:#162631;--surface-alt:#1d303c;--text:#e2edf2;--muted:#a5bac5;
+      --border:#304754;--primary:#59c4d5;--primary-soft:#173d47;--blue:#8bb8e8;--blue-soft:#20364d;
+      --orange:#f0a258;--orange-soft:#422d1b;--green:#73d3a9;--green-soft:#173c30;--red:#f19b94;
+      --red-soft:#482524;--shadow:none
+    }
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:17px;line-height:1.8}
+    main{width:min(100% - 32px,1200px);margin:auto;padding:28px 0 88px}.page-shell{display:grid;grid-template-columns:270px minmax(0,898px);gap:32px;align-items:start}.article-column{min-width:0}
+    header{display:grid;gap:18px;padding-bottom:36px;border-bottom:1px solid var(--border)}.header-top{display:flex;align-items:center;justify-content:space-between;gap:18px}.eyebrow{color:var(--primary);font:700 .78rem ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase}.language-switch{flex:0 0 auto;font-size:.9rem}.language-switch a{text-decoration:none}
+    h1,h2,h3,p,ul,ol,blockquote,table{margin:0}h1,h2,h3{text-wrap:balance;line-height:1.35}h1{max-width:840px;font:700 clamp(2.05rem,5vw,3.65rem)/1.12 Georgia,"Times New Roman",serif;letter-spacing:-.035em}h2{font-size:clamp(1.45rem,3vw,1.95rem)}h3{font-size:1.08rem}a{color:var(--primary);text-underline-offset:4px}.lead{max-width:790px;color:var(--muted);font-size:1.08rem}.thesis{padding:18px 20px;border-left:4px solid var(--primary);background:var(--primary-soft);font-weight:650}
+    .sidebar{position:sticky;top:28px;display:grid;gap:16px;max-height:calc(100vh - 56px);overflow-y:auto}.sidebar nav,.library{padding:21px 22px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.sidebar strong{display:block;margin-bottom:9px}.sidebar ol{display:grid;gap:5px;padding-left:20px;font-size:.92rem}.sidebar a{color:var(--text);text-decoration:none}.sidebar a:hover{color:var(--primary)}.library ul{display:grid;gap:8px;padding:0;list-style:none;font-size:.9rem}.library li{padding-bottom:8px;border-bottom:1px solid var(--border)}.library li:last-child{border:0;padding:0}.all-notes{display:inline-block;margin-top:12px;color:var(--primary)!important;font-weight:700;text-decoration:none}
+    section{display:grid;gap:20px;padding-top:54px}.section-heading{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start}.number{display:grid;width:34px;height:34px;place-items:center;border:1px solid var(--primary);color:var(--primary);font:700 .82rem ui-monospace,Menlo,monospace}.note,.warning,.conclusion{padding:18px 20px;border:1px solid var(--border);background:var(--surface-alt)}.note strong,.warning strong,.conclusion strong{display:block;margin-bottom:4px}.warning{border-color:var(--orange);background:var(--orange-soft)}.conclusion{border-color:var(--green);background:var(--green-soft)}
+    .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.cards.two-by-two{grid-template-columns:repeat(2,minmax(0,1fr))}.card{display:grid;align-content:start;gap:9px;padding:19px;border-top:4px solid var(--primary);background:var(--surface);box-shadow:var(--shadow)}.card.blue{border-color:var(--blue)}.card.orange{border-color:var(--orange)}.card.green{border-color:var(--green)}.card.red{border-color:var(--red)}.card p,.card li{color:var(--muted);font-size:.93rem}.card ul{display:grid;gap:5px;padding-left:18px}
+    .process{display:flex;align-items:stretch;width:100%;padding:21px;overflow-x:auto;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.step{display:grid;flex:1 0 126px;min-height:104px;align-content:center;justify-items:center;gap:5px;padding:13px 10px;border:1px solid var(--border);background:var(--surface-alt);text-align:center}.step strong{line-height:1.35}.step small{color:var(--muted);line-height:1.45}.step.active{border-color:var(--primary);background:var(--primary-soft)}.step.safe{border-color:var(--green);background:var(--green-soft)}.step.warn{border-color:var(--orange);background:var(--orange-soft)}
+    .arrow{position:relative;flex:0 0 38px;min-width:38px}.arrow:before{content:"";position:absolute;top:50%;left:4px;right:8px;height:2px;background:var(--border)}.arrow:after{content:"";position:absolute;top:calc(50% - 5px);right:5px;width:9px;height:9px;border-top:2px solid var(--primary);border-right:2px solid var(--primary);transform:rotate(45deg)}.arrow span{position:absolute;top:calc(50% - 3px);left:4px;width:7px;height:7px;border-radius:50%;background:var(--primary);animation:travel 2.2s ease-in-out infinite}@keyframes travel{from{transform:translateX(0);opacity:.15}50%{opacity:1}to{transform:translateX(22px);opacity:.15}}
+    .loop{display:grid;grid-template-columns:repeat(4,1fr);gap:34px 14px;padding:21px 21px 58px;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow);position:relative}.loop .step{position:relative}.loop .step:not(:last-of-type):after{content:"→";position:absolute;right:-26px;top:50%;color:var(--primary);font-size:1.25rem;transform:translateY(-50%)}.loop-back{position:absolute;left:9%;right:9%;bottom:20px;height:24px;border-right:2px solid var(--primary);border-bottom:2px solid var(--primary);border-left:2px solid var(--primary);border-radius:0 0 14px 14px}.loop-back:after{content:"";position:absolute;left:-5px;top:-2px;width:8px;height:8px;border-top:2px solid var(--primary);border-left:2px solid var(--primary);transform:rotate(45deg)}.loop-back span{position:absolute;left:50%;bottom:-14px;padding:0 7px;background:var(--surface);color:var(--primary);font:700 .72rem ui-monospace,Menlo,monospace;transform:translateX(-50%)}
+    .comparison{overflow-x:auto}.comparison table{width:100%;min-width:700px;border-collapse:collapse;background:var(--surface);box-shadow:var(--shadow)}th,td{padding:13px 14px;border:1px solid var(--border);vertical-align:top;text-align:left}th{background:var(--surface-alt)}td{font-size:.93rem}.tag{display:inline-block;padding:2px 7px;border:1px solid var(--border);background:var(--surface-alt);font:700 .73rem ui-monospace,Menlo,monospace}.tag.now{color:var(--green);border-color:var(--green)}.tag.emerging{color:var(--orange);border-color:var(--orange)}.tag.research{color:var(--blue);border-color:var(--blue)}
+    .levels{display:grid;gap:10px}.level{display:grid;grid-template-columns:132px 1fr 190px;gap:14px;align-items:center;padding:15px 17px;border:1px solid var(--border);background:var(--surface)}.level .scope{color:var(--primary);font-weight:750}.level .gate{color:var(--muted);font-size:.9rem}.formula{padding:18px 20px;overflow-x:auto;border:1px solid var(--border);background:var(--surface);font:650 .9rem/1.8 ui-monospace,Menlo,monospace;white-space:nowrap}
+    .skillopt-figure{max-width:100%;margin:0;border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow)}.figure-scroll{max-width:100%;overflow-x:auto;background:#0b1119}.skillopt-figure a{display:block}.skillopt-figure img{display:block;width:100%;height:auto}.skillopt-figure figcaption{padding:13px 16px;color:var(--muted);font-size:.88rem;line-height:1.65}.skillopt-figure figcaption strong{color:var(--text)}
+    footer{display:grid;gap:14px;margin-top:54px;padding-top:28px;border-top:1px solid var(--border);color:var(--muted);font-size:.9rem}footer ol{display:grid;gap:8px;padding-left:22px}footer a{overflow-wrap:anywhere}
+    @media(max-width:960px){main{width:min(100% - 24px,898px);padding-top:24px}.page-shell{display:block}.sidebar{position:static;max-height:none;margin-top:28px;overflow:visible}.article-column{display:flex;flex-direction:column}.sidebar{order:2}.article-column{order:1}.cards{grid-template-columns:1fr 1fr}.level{grid-template-columns:1fr}.loop{grid-template-columns:1fr;gap:30px;padding-bottom:54px}.loop .step:not(:last-of-type):after{right:50%;top:auto;bottom:-28px;transform:translate(50%,0) rotate(90deg)}}
+    @media(max-width:650px){.header-top{align-items:flex-start;flex-direction:column;gap:5px}.cards{grid-template-columns:1fr}.process{flex-direction:column;overflow:visible}.arrow{flex-basis:34px;min-width:0;min-height:34px}.arrow:before{top:4px;bottom:8px;left:50%;right:auto;width:2px;height:auto}.arrow:after{top:auto;right:auto;bottom:5px;left:calc(50% - 5px);transform:rotate(135deg)}.arrow span{top:4px;left:calc(50% - 3px);animation-name:down}.skillopt-figure.dense img{width:720px;max-width:none}@keyframes down{from{transform:translateY(0);opacity:.15}50%{opacity:1}to{transform:translateY(20px);opacity:.15}}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.arrow span{animation:none}}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="page-shell">
+      <aside class="sidebar">
+        <nav aria-label="Contents">
+          <strong>Contents</strong>
+          <ol>
+            <li><a href="#skill">What is a Skill?</a></li>
+            <li><a href="#trend">The real trend: LLM-assisted Skill improvement</a></li>
+            <li><a href="#hermes">Hermes: agents managing their own Skills</a></li>
+            <li><a href="#skillopt">SkillOpt: training Skills with evaluation</a></li>
+          </ol>
+        </nav>
+        <div class="library" aria-label="Other learning notes">
+          <strong>AI Learning Library</strong>
+          <ul>
+            <li aria-current="page">Current: Agent Skill Evolution</li>
+            <li><a href="../../test-time-training/en/">Test-Time Training: Teaching LLMs While They Work</a></li>
+            <li><a href="../../llm-training-rl-inference/en/">LLM Training, RL Rollouts, and Training–Inference Integration</a></li>
+          </ul>
+          <a class="all-notes" href="../../../en/">Browse all notes →</a>
+        </div>
+      </aside>
+
+      <article class="article-column">
+        <header>
+          <div class="header-top"><div class="eyebrow">Fact-checked Learning Notes · Agent Skills</div><div class="language-switch"><a href="../" hreflang="zh-CN">中文</a>&nbsp;·&nbsp;<strong>English</strong></div></div>
+          <h1>Agent Skill Evolution: From Authored Instructions to Validated Improvement</h1>
+          <p class="lead">Today, experts commonly write Skills themselves or ask an LLM to help, while agents load relevant Skills on demand from their descriptions. The more interesting development is that LLMs are beginning to help users improve existing Skills from execution experience—and test those changes on Held-out tasks before adoption.</p>
+          <div class="thesis">This note follows one central trend: <strong>Skills are moving from things agents merely use to external capabilities that LLMs can improve from experience.</strong> Hermes shows how an agent can modify its own Skills; Microsoft SkillOpt proposes a more disciplined approach grounded in Rollouts, bounded edits, and Held-out tasks.</div>
+        </header>
+
+        <section id="skill">
+          <div class="section-heading"><div class="number">01</div><h2>First, what is a Skill?</h2></div>
+          <p>A Skill is a package of procedural knowledge that an agent can load when relevant. At minimum, it contains a metadata-bearing <code>SKILL.md</code>; richer Skills can also include scripts, references, assets, and templates. The open Agent Skills specification requires the description to explain both what the Skill does and when it should be used.<a href="#ref-spec">[1]</a></p>
+          <div class="comparison"><table>
+            <thead><tr><th>Concept</th><th>Main question</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td>Prompt</td><td>What should the agent do this time?</td><td>“Create this week’s project report from these materials.”</td></tr>
+              <tr><td>Tool</td><td>What action can the agent perform?</td><td>Search files, run code, or call an API.</td></tr>
+              <tr><td><strong>Skill</strong></td><td>What procedure should the agent follow for this class of task?</td><td>How to select reliable sources, resolve conflicts, verify results, and use the correct template.</td></tr>
+            </tbody>
+          </table></div>
+          <h3>How does an agent invoke a Skill?</h3>
+          <div class="process" role="img" aria-label="Progressive disclosure for Agent Skills">
+            <div class="step"><strong>Discover</strong><small>See only names and descriptions at startup</small></div><div class="arrow"><span></span></div>
+            <div class="step active"><strong>Match</strong><small>Identify a Skill relevant to the current task</small></div><div class="arrow"><span></span></div>
+            <div class="step warn"><strong>Load</strong><small>Read the complete SKILL.md</small></div><div class="arrow"><span></span></div>
+            <div class="step safe"><strong>Execute</strong><small>Use scripts, references, and templates as needed</small></div>
+          </div>
+          <div class="cards">
+            <article class="card"><h3>Composable</h3><p>A task can combine research, spreadsheet-processing, and report-generation Skills.</p></article>
+            <article class="card blue"><h3>Portable</h3><p>An open format gives one Skill a path to reuse across compatible agents and harnesses.</p></article>
+            <article class="card green"><h3>Context-efficient</h3><p>The agent first sees brief metadata and loads full instructions only when relevant—progressive disclosure.</p></article>
+          </div>
+        </section>
+
+        <section id="trend">
+          <div class="section-heading"><div class="number">02</div><h2>The real trend: LLMs helping users improve Skills</h2></div>
+          <p>Expert-authored and LLM-assisted Skill creation are already standard approaches. Agents deciding whether to load a Skill from its description is also a normal runtime mechanism.</p>
+          <p>The emerging change is that <strong>LLMs no longer only consume Skills; they can also use execution experience to help improve them.</strong></p>
+          <div class="process" role="img" aria-label="An LLM improves a Skill from task experience and validates it on independent tasks">
+            <div class="step"><strong>Current Skill</strong><small>The agent performs tasks with the current version</small></div><div class="arrow"><span></span></div>
+            <div class="step active"><strong>Experience</strong><small>Successes, failures, tool results, and corrections</small></div><div class="arrow"><span></span></div>
+            <div class="step warn"><strong>LLM proposes a Patch</strong><small>Produce bounded changes grounded in evidence</small></div><div class="arrow"><span></span></div>
+            <div class="step safe"><strong>Scientific validation</strong><small>Adopt only if Held-out tasks improve</small></div>
+          </div>
+          <div class="cards">
+            <article class="card orange"><h3>A direct implementation</h3><p>An agent reviews a completed task, identifies a reusable lesson, and creates or patches a Skill. Hermes demonstrates this product mechanism.</p></article>
+            <article class="card green"><h3>A more disciplined implementation</h3><p>The system collects multiple Rollouts, proposes constrained edits, and compares versions on Held-out tasks. SkillOpt adds methodological rigor to the same direction.</p></article>
+            <article class="card blue"><h3>The shared objective</h3><p>The goal is not arbitrary rewriting. It is to make existing Skills more effective through evidence from real execution.</p></article>
+          </div>
+        </section>
+
+        <section id="hermes">
+          <div class="section-heading"><div class="number">03</div><h2>Hermes: agents begin managing their own Skills</h2></div>
+          <h3>What are Hermes and <code>skill_manage</code>?</h3>
+          <p>Hermes Agent belongs to the same broad category as OpenClaw: an open-source agent harness and runtime rather than a foundation model. It coordinates models, tools, Skills, terminals, memory, and conversation execution, although its architecture and features differ from OpenClaw. <code>skill_manage</code> is a built-in Skill-management tool supplied by the Hermes harness—not a capability native to the LLM. The model decides when to call it, and Hermes turns that tool call into an actual Skill-file operation.<a href="#ref-hermes">[2]</a><a href="#ref-openclaw">[5]</a></p>
+          <div class="note"><strong>In one sentence</strong>The LLM decides whether an experience is worth preserving and how the Skill should change; <code>skill_manage</code> performs the file operation.</div>
+          <h3>What experiences does Hermes consider worth saving?</h3>
+          <div class="cards">
+            <article class="card"><h3>A complex workflow succeeded</h3><p>The agent completed a multi-step procedure likely to recur.</p></article>
+            <article class="card orange"><h3>A failure revealed a working path</h3><p>The agent hit errors or dead ends and eventually found a reliable solution.</p></article>
+            <article class="card blue"><h3>The user corrected the agent</h3><p>The user identified a bad approach and supplied more accurate steps or conditions.</p></article>
+          </div>
+          <h3>What can <code>skill_manage</code> do?</h3>
+          <div class="comparison"><table>
+            <thead><tr><th>Action</th><th>When the agent might use it</th><th>Execution</th></tr></thead>
+            <tbody>
+              <tr><td>Create</td><td>A reusable procedure is recorded for the first time</td><td>Create a complete SKILL.md.</td></tr>
+              <tr><td><strong>Patch</strong></td><td>Only one rule or step needs changing</td><td>Supply old and new text; Hermes recommends this targeted update.</td></tr>
+              <tr><td>Edit</td><td>The existing structure needs a broad rewrite</td><td>Replace the full document.</td></tr>
+              <tr><td>Write / remove file</td><td>Add or remove scripts, templates, or references</td><td>Manage supporting files within the Skill directory.</td></tr>
+              <tr><td>Delete</td><td>A Skill is obsolete, wrong, or superseded</td><td>Request removal of the entire Skill.</td></tr>
+            </tbody>
+          </table></div>
+          <div class="note"><strong>Execution and approval</strong><p>The agent can invoke these actions without a person performing each step, but they do not run as a fixed sequence on every turn. By default, Hermes executes the tool call directly. If Skill change approval is enabled, mutations are staged so the user can review a diff and approve or reject them.</p></div>
+          <h3>What does Hermes learn from?</h3>
+          <p>Hermes documents three entry points:</p>
+          <div class="cards">
+            <article class="card green"><h3>Save during the current task</h3><p>The agent can call <code>skill_manage</code> after a complex success, failure recovery, or user correction in the current context.</p></article>
+            <article class="card blue"><h3>Background review after a turn</h3><p>A background self-improvement review examines the recent experience and may propose or stage a Skill update.</p></article>
+            <article class="card"><h3>Explicit <code>/learn</code></h3><p>The user can ask Hermes to build a Skill from local material, a webpage, pasted notes, or a workflow completed in the conversation.</p></article>
+          </div>
+          <div class="process" role="img" aria-label="Hermes turns current conversation experience into a Skill change">
+            <div class="step"><strong>Current context</strong><small>Conversation, tool results, errors, and corrections</small></div><div class="arrow"><span></span></div>
+            <div class="step active"><strong>Agent judgment</strong><small>Is there a reusable procedure?</small></div><div class="arrow"><span></span></div>
+            <div class="step warn"><strong>skill_manage</strong><small>Create, Patch, Edit, and more</small></div><div class="arrow"><span></span></div>
+            <div class="step safe"><strong>Apply or stage</strong><small>Depending on approval settings</small></div>
+          </div>
+          <div class="note"><strong>Conversation data and consent</strong>Messages and tool results already present in the agent’s context can influence a generated Skill. Hermes documentation does not describe a separate enterprise consent system or cross-user aggregation mechanism. A product that additionally retains, analyzes offline, or reuses user activity across sessions needs explicit disclosure, appropriate consent, retention controls, sensitive-data handling, and access boundaries.</div>
+        </section>
+
+        <section id="skillopt">
+          <div class="section-heading"><div class="number">04</div><h2>Microsoft SkillOpt: training Skill changes with evaluation</h2></div>
+          <h3>SkillOpt in brief</h3>
+          <p>SkillOpt is a Microsoft Research text-space optimization method that resembles deep-learning discipline while operating directly on a natural-language Skill document. The target agent and model remain frozen. A separate optimizer model analyzes scored task trajectories—Rollouts—and proposes bounded additions, deletions, and replacements to the working <code>skill.md</code>. A candidate is accepted only when it strictly outperforms the current version on Held-out tasks.<a href="#ref-skillopt">[3]</a><a href="#ref-skillopt-project">[4]</a></p>
+          <figure class="skillopt-figure dense">
+            <div class="figure-scroll"><a href="../assets/skillopt-concept-analogy.png" target="_blank" rel="noopener" aria-label="Open the full SkillOpt text-space analogy"><img src="../assets/skillopt-concept-analogy.png" width="1398" height="776" loading="lazy" decoding="async" alt="SkillOpt maps parameters, gradients, learning rates, and validation to skill.md, edit direction, edit budget, and a Held-out gate"></a></div>
+            <figcaption><strong>Figure 1｜SkillOpt’s text-space analogy.</strong> It treats <code>skill.md</code> as the text artifact being optimized, derives edit directions from trajectory reflection, bounds update size with an edit budget, and uses a Held-out gate for acceptance. This is a methodological analogy—not gradient training of the underlying model—and “optimal” in the graphic should not be read as proof of a global optimum.</figcaption>
+          </figure>
+          <div class="note"><strong><code>skill.md</code> and <code>best_skill.md</code></strong><p><code>skill.md</code> is the working text edited during optimization; <code>best_skill.md</code> is the best validated version exported so far. These files can play the instructional role of SKILL.md, but the reported implementation does not jointly optimize scripts, references, assets, or other files in a complete Agent Skills package.</p></div>
+          <div class="note"><strong>What are Held-out tasks?</strong><p>SkillOpt divides tasks into two groups. One group produces Rollouts and informs Skill edits. The other group does not participate in editing and is used only to test candidates. Those independent test cases are Held-out tasks: they reveal whether an edit transfers beyond the examples that produced it.</p></div>
+          <h3>SkillOpt’s four core actions</h3>
+          <div class="loop" role="img" aria-label="SkillOpt loop: Rollout, reflection, bounded editing, and validation">
+            <div class="step"><strong>1 · Rollout</strong><small>Run training tasks with the current Skill</small></div>
+            <div class="step active"><strong>2 · Reflect</strong><small>Analyze successful and failed trajectories</small></div>
+            <div class="step warn"><strong>3 · Bounded edit</strong><small>Merge, rank, and limit changes</small></div>
+            <div class="step safe"><strong>4 · Validation gate</strong><small>Accept only if Held-out tasks improve</small></div>
+            <div class="loop-back"><span>accepted skill → next round</span></div>
+          </div>
+          <figure class="skillopt-figure dense">
+            <div class="figure-scroll"><a href="../assets/skillopt-training-loop.png" target="_blank" rel="noopener" aria-label="Open the full SkillOpt training loop"><img src="../assets/skillopt-training-loop.png" width="1098" height="796" loading="lazy" decoding="async" alt="SkillOpt loop from skill.md through a Rollout batch, minibatch reflection, bounded update, proposed Skill, and Held-out check"></a></div>
+            <figcaption><strong>Figure 2｜The complete SkillOpt update loop.</strong> The graphic shows six nodes because it draws the current <code>skill.md</code> and proposed Skill as explicit intermediate states. The article’s four steps group the underlying actions into Rollout, Reflect, Bounded edit, and Validation.</figcaption>
+          </figure>
+          <h3>What happens at each step?</h3>
+          <div class="comparison"><table>
+            <thead><tr><th>Step</th><th>Input</th><th>Output or control</th></tr></thead>
+            <tbody>
+              <tr><td>Rollout</td><td>Current Skill plus training tasks</td><td>Trajectories containing messages, tool calls, observations, outcomes, and scores.</td></tr>
+              <tr><td>Reflect</td><td>Successful and failed trajectories</td><td>Identify behavior to preserve and recurring problems to correct.</td></tr>
+              <tr><td>Bounded edit</td><td>Proposed add, delete, and replace operations</td><td>Merge, deduplicate, rank, and clip edits under a budget.</td></tr>
+              <tr><td>Validation</td><td>Current and candidate Skills</td><td>Compare them on Held-out tasks; accept only a strict improvement.</td></tr>
+            </tbody>
+          </table></div>
+          <h3>Why are Held-out tasks essential?</h3>
+          <p>Evaluating a candidate on the same examples that produced its edits encourages overfitting. Held-out tasks did not participate in editing, so they better test whether the change transfers.</p>
+          <div class="process" role="img" aria-label="Compare the current and candidate Skills on Held-out tasks">
+            <div class="step"><strong>Current Skill</strong><small>Establish a Held-out baseline</small></div><div class="arrow"><span></span></div>
+            <div class="step warn"><strong>Candidate Skill</strong><small>Run the same tasks and environment</small></div><div class="arrow"><span></span></div>
+            <div class="step active"><strong>Compare scores</strong><small>Success, constraints, cost, and more</small></div><div class="arrow"><span></span></div>
+            <div class="step safe"><strong>Accept or reject</strong><small>Promote only a strict improvement</small></div>
+          </div>
+          <div class="comparison"><table>
+            <thead><tr><th>Evaluation dimension</th><th>Question</th></tr></thead>
+            <tbody>
+              <tr><td>Task success</td><td>Does the candidate complete the intended task more reliably?</td></tr>
+              <tr><td>Constraint compliance</td><td>Does it follow formatting, safety, tool, and business boundaries?</td></tr>
+              <tr><td>Transfer</td><td>Does it remain useful across tasks, models, or agent harnesses?</td></tr>
+              <tr><td>Cost and latency</td><td>Does a small accuracy gain require too many extra tool calls or tokens?</td></tr>
+              <tr><td>Regression</td><td>Did fixing one failure break tasks the previous Skill could complete?</td></tr>
+            </tbody>
+          </table></div>
+          <div class="note"><strong>Automatic editing still requires performance validation</strong><p>Hermes publicly documents conversation review, structural validation, linting, optional security scanning, and Skill-change approval. These mechanisms help manage Skill updates but do not prove that an edit improves task performance. SkillOpt adds a Held-out-task performance gate. Public materials do not show Hermes integrating SkillOpt-style evaluation.<a href="#ref-hermes-manager">[6]</a><a href="#ref-hermes-review">[7]</a></p></div>
+          <figure class="skillopt-figure dense">
+            <div class="figure-scroll"><a href="../assets/skillopt-transfer-evidence.png" target="_blank" rel="noopener" aria-label="Open the full SkillOpt transfer graphic"><img src="../assets/skillopt-transfer-evidence.png" width="1428" height="758" loading="lazy" decoding="async" alt="One best_skill.md transferred across models, agent harnesses, and benchmarks in three experiments"></a></div>
+            <figcaption><strong>Figure 3｜Three transfer directions tested in the SkillOpt work.</strong> The same <code>best_skill.md</code> is evaluated across models, agent harnesses, and benchmarks. The displayed +5.6, +29.4, and +2.3 values belong to the particular experimental settings and target baselines shown; they are not universal SkillOpt gains.</figcaption>
+          </figure>
+          <div class="warning"><strong>Evidence boundary</strong>SkillOpt reports best or tied-best results across 52 evaluated cells spanning six benchmarks, seven target models, and three execution modes, with transfer across models and harnesses. These are research benchmarks—not a guarantee that every production task will obtain the same improvement.</div>
+        </section>
+
+        <footer>
+          <strong>Primary sources</strong>
+          <ol>
+            <li id="ref-spec"><a href="https://agentskills.io/">Agent Skills Open Standard</a>: Skill directories, SKILL.md, and progressive disclosure.</li>
+            <li id="ref-hermes"><a href="https://hermes-agent.nousresearch.com/">Hermes Agent · Skills System</a>: <code>skill_manage</code>, <code>/learn</code>, background review, and Skill-change approval.</li>
+            <li id="ref-skillopt"><a href="https://arxiv.org/abs/2605.23904">SkillOpt: Executive Strategy for Self-Evolving Agent Skills</a>: bounded text optimization, Held-out-task validation, and best-version selection.</li>
+            <li id="ref-skillopt-project"><a href="https://microsoft.github.io/SkillOpt/">Microsoft SkillOpt Project</a>: method, code, and SkillOpt-Sleep preview.</li>
+            <li id="ref-openclaw"><a href="https://docs.openclaw.ai/">OpenClaw Docs</a>: the product boundary of an open-source agent harness and runtime.</li>
+            <li id="ref-hermes-manager"><a href="https://github.com/NousResearch/hermes-agent/blob/main/tools/skill_manager_tool.py">Hermes skill_manager_tool.py</a>: file operations, structural validation, linting, and optional scanning.</li>
+            <li id="ref-hermes-review"><a href="https://github.com/NousResearch/hermes-agent/blob/main/agent/background_review.py">Hermes background_review.py</a>: conversation-snapshot replay and background review.</li>
+          </ol>
+          <p>Hermes, Agent Skills, and OpenClaw descriptions come from product documentation, specifications, and public source code. SkillOpt claims come from its research evaluation. Discussion of conversation data and consent is limited to what public Hermes materials disclose.</p>
+        </footer>
+      </article>
+    </div>
+  </main>
+</body>
+</html>
