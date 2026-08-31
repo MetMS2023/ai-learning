@@ -51,7 +51,8 @@
     @keyframes travel-down{from{transform:translateY(0);opacity:.15}50%{opacity:1}to{transform:translateY(22px);opacity:.15}}
     @media(max-width:960px){main{width:min(100% - 32px,900px)}.page-shell{display:block}.navigation-grid{position:static;max-height:none;margin-top:28px;overflow:visible}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.process-arrow span{animation:none}}
-  </style>
+  .breadcrumb{display:flex;flex-wrap:wrap;gap:.45rem}.breadcrumb a{color:var(--primary);text-decoration:none}.breadcrumb [aria-current="page"]{color:var(--muted)}
+</style>
 </head>
 <body>
   <main>
@@ -82,7 +83,7 @@
     </div>
       <article class="article-column">
     <header>
-      <div class="header-top"><div class="eyebrow">Fact-checked Learning Notes · Test-Time Training</div><div class="language-switch"><a href="../" hreflang="zh-CN">中文</a>&nbsp;·&nbsp;<strong>English</strong></div></div>
+      <div class="header-top"><div class="eyebrow breadcrumb"><a href="../../../en/">Home</a><span>·</span><a href="../../en/">AI Learning</a><span>·</span><span aria-current="page">Test-Time Training: Teaching LLMs While They Work</span></div><div class="language-switch"><a href="../" hreflang="zh-CN">中文</a>&nbsp;·&nbsp;<strong>English</strong></div></div>
       <h1>Test-Time Training: Letting LLMs Keep Learning While They Work</h1>
       <p class="lead">The point is not to chase rumors about SSI, but to understand TTT as a research direction that could change the shape of LLMs: why it exists, whether it still uses Transformers, how context is written into weights, and how the model can avoid getting worse as it learns.</p>
       <div class="thesis">Core intuition:<strong>Today’s LLMs treat context as temporary scratch space. TTT turns current experience into a small training process so useful information can enter temporary weights.</strong></div>

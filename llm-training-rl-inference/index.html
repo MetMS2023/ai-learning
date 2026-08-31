@@ -285,7 +285,8 @@
       html { scroll-behavior: auto; }
       .process-arrow span { animation: none; }
     }
-  </style>
+  .breadcrumb{display:flex;flex-wrap:wrap;gap:.45rem}.breadcrumb a{color:var(--primary);text-decoration:none}.breadcrumb [aria-current="page"]{color:var(--muted)}
+</style>
 </head>
 <body>
   <main>
@@ -314,7 +315,7 @@
     </div>
       <article class="article-column">
     <header>
-      <div class="header-top"><div class="eyebrow">Fact-checked Learning Notes · LLM Systems</div><div class="language-switch"><strong>中文</strong>&nbsp;·&nbsp;<a href="./en/" hreflang="en">English</a></div></div>
+      <div class="header-top"><div class="eyebrow breadcrumb"><a href="../../">Home</a><span>·</span><a href="../">AI Learning</a><span>·</span><span aria-current="page">大模型训练、RL Rollout 与训推一体化</span></div><div class="language-switch"><strong>中文</strong>&nbsp;·&nbsp;<a href="./en/" hreflang="en">English</a></div></div>
       <h1>大模型训练、RL Rollout 与训推一体化</h1>
       <p class="lead">这份笔记梳理大模型从预训练、后训练到上线服务的完整生命周期，重点理解 on-policy RL 为什么要持续生成新 Rollout、PPO/GRPO 位于哪个环节，以及“训推一体化”究竟解决什么问题。</p>
       <div class="thesis">核心认识：当前策略生成 Rollout、更新权重、再生成下一批经验，是 on-policy RL 的标准机制。大模型领域的特殊挑战，主要在于如何以极大规模高效完成生成、评分、训练与权重同步。</div>

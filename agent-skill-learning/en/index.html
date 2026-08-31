@@ -41,7 +41,8 @@
     @media(max-width:960px){main{width:min(100% - 24px,898px);padding-top:24px}.page-shell{display:block}.sidebar{position:static;max-height:none;margin-top:28px;overflow:visible}.article-column{display:flex;flex-direction:column}.sidebar{order:2}.article-column{order:1}.cards{grid-template-columns:1fr 1fr}.level{grid-template-columns:1fr}.loop{grid-template-columns:1fr;gap:30px;padding-bottom:54px}.loop .step:not(:last-of-type):after{right:50%;top:auto;bottom:-28px;transform:translate(50%,0) rotate(90deg)}}
     @media(max-width:650px){.header-top{align-items:flex-start;flex-direction:column;gap:5px}.cards{grid-template-columns:1fr}.process{flex-direction:column;overflow:visible}.arrow{flex-basis:34px;min-width:0;min-height:34px}.arrow:before{top:4px;bottom:8px;left:50%;right:auto;width:2px;height:auto}.arrow:after{top:auto;right:auto;bottom:5px;left:calc(50% - 5px);transform:rotate(135deg)}.arrow span{top:4px;left:calc(50% - 3px);animation-name:down}.skillopt-figure.dense img{width:720px;max-width:none}@keyframes down{from{transform:translateY(0);opacity:.15}50%{opacity:1}to{transform:translateY(20px);opacity:.15}}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.arrow span{animation:none}}
-  </style>
+  .breadcrumb{display:flex;flex-wrap:wrap;gap:.45rem}.breadcrumb a{color:var(--primary);text-decoration:none}.breadcrumb [aria-current="page"]{color:var(--muted)}
+</style>
 </head>
 <body>
   <main>
@@ -69,7 +70,7 @@
 
       <article class="article-column">
         <header>
-          <div class="header-top"><div class="eyebrow">Fact-checked Learning Notes · Agent Skills</div><div class="language-switch"><a href="../" hreflang="zh-CN">中文</a>&nbsp;·&nbsp;<strong>English</strong></div></div>
+          <div class="header-top"><div class="eyebrow breadcrumb"><a href="../../../en/">Home</a><span>·</span><a href="../../en/">AI Learning</a><span>·</span><span aria-current="page">Agent Skill Evolution: From Authored Instructions to Validated Improvement</span></div><div class="language-switch"><a href="../" hreflang="zh-CN">中文</a>&nbsp;·&nbsp;<strong>English</strong></div></div>
           <h1>Agent Skill Evolution: From Authored Instructions to Validated Improvement</h1>
           <p class="lead">Today, experts commonly write Skills themselves or ask an LLM to help, while agents load relevant Skills on demand from their descriptions. The more interesting development is that LLMs are beginning to help users improve existing Skills from execution experience—and test those changes on Held-out tasks before adoption.</p>
           <div class="thesis">This note follows one central trend: <strong>Skills are moving from things agents merely use to external capabilities that LLMs can improve from experience.</strong> Hermes shows how an agent can modify its own Skills; Microsoft SkillOpt proposes a more disciplined approach grounded in Rollouts, bounded edits, and Held-out tasks.</div>

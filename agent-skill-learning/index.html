@@ -41,7 +41,8 @@
     @media(max-width:960px){main{width:min(100% - 24px,898px);padding-top:24px}.page-shell{display:block}.sidebar{position:static;max-height:none;margin-top:28px;overflow:visible}.article-column{display:flex;flex-direction:column}.sidebar{order:2}.article-column{order:1}.cards{grid-template-columns:1fr 1fr}.level{grid-template-columns:1fr}.loop{grid-template-columns:1fr;gap:30px;padding-bottom:54px}.loop .step:not(:last-of-type):after{right:50%;top:auto;bottom:-28px;transform:translate(50%,0) rotate(90deg)}}
     @media(max-width:650px){.header-top{align-items:flex-start;flex-direction:column;gap:5px}.cards{grid-template-columns:1fr}.process{flex-direction:column;overflow:visible}.arrow{flex-basis:34px;min-width:0;min-height:34px}.arrow:before{top:4px;bottom:8px;left:50%;right:auto;width:2px;height:auto}.arrow:after{top:auto;right:auto;bottom:5px;left:calc(50% - 5px);transform:rotate(135deg)}.arrow span{top:4px;left:calc(50% - 3px);animation-name:down}.skillopt-figure.dense img{width:720px;max-width:none}@keyframes down{from{transform:translateY(0);opacity:.15}50%{opacity:1}to{transform:translateY(20px);opacity:.15}}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.arrow span{animation:none}}
-  </style>
+  .breadcrumb{display:flex;flex-wrap:wrap;gap:.45rem}.breadcrumb a{color:var(--primary);text-decoration:none}.breadcrumb [aria-current="page"]{color:var(--muted)}
+</style>
 </head>
 <body>
   <main>
@@ -69,7 +70,7 @@
 
       <article class="article-column">
         <header>
-          <div class="header-top"><div class="eyebrow">Fact-checked Learning Notes · Agent Skills</div><div class="language-switch"><strong>中文</strong>&nbsp;·&nbsp;<a href="./en/" hreflang="en">English</a></div></div>
+          <div class="header-top"><div class="eyebrow breadcrumb"><a href="../../">Home</a><span>·</span><a href="../">AI Learning</a><span>·</span><span aria-current="page">Agent Skill 应用趋势：从人工编写到可验证的持续进化</span></div><div class="language-switch"><strong>中文</strong>&nbsp;·&nbsp;<a href="./en/" hreflang="en">English</a></div></div>
           <h1>Agent Skill 应用趋势：从人工编写到可验证的持续进化</h1>
           <p class="lead">今天，专家或 LLM 辅助创建 Skill，以及根据 description 按需调用 Skill，都已经是常规操作。真正的新趋势是：LLM 开始帮助用户持续升级已有 Skill，并用没有参与修改的 Held-out tasks 检查改进是否真的有效。</p>
           <div class="thesis">本文只关注一个核心趋势：<strong>Skill 从“被创建、被调用”，发展为“由 LLM 根据经历持续提出改进”</strong>。Hermes 展示了 Agent 如何主动修改 Skill；Microsoft SkillOpt 则提供一套更科学的方法，确保修改不是凭感觉，而是有轨迹证据、有更新限制，并经过 Held-out tasks 验证。</div>

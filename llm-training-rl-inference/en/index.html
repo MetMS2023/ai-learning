@@ -285,7 +285,8 @@
       html { scroll-behavior: auto; }
       .process-arrow span { animation: none; }
     }
-  </style>
+  .breadcrumb{display:flex;flex-wrap:wrap;gap:.45rem}.breadcrumb a{color:var(--primary);text-decoration:none}.breadcrumb [aria-current="page"]{color:var(--muted)}
+</style>
 </head>
 <body>
   <main>
@@ -314,7 +315,7 @@
     </div>
       <article class="article-column">
     <header>
-      <div class="header-top"><div class="eyebrow">Fact-checked Learning Notes · LLM Systems</div><div class="language-switch"><a href="../" hreflang="zh-CN">中文</a>&nbsp;·&nbsp;<strong>English</strong></div></div>
+      <div class="header-top"><div class="eyebrow breadcrumb"><a href="../../../en/">Home</a><span>·</span><a href="../../en/">AI Learning</a><span>·</span><span aria-current="page">LLM Training, RL Rollouts, and Training–Inference Integration</span></div><div class="language-switch"><a href="../" hreflang="zh-CN">中文</a>&nbsp;·&nbsp;<strong>English</strong></div></div>
       <h1>LLM Training, RL Rollouts, and Training–Inference Integration</h1>
       <p class="lead">This note maps the full LLM lifecycle from pre-training and post-training to production serving. It focuses on why on-policy RL requires fresh rollouts, where PPO and GRPO fit, and what training–inference integration actually solves.</p>
       <div class="thesis">Core idea: the current policy generates rollouts, updates its weights, and then generates the next batch of experience. That is standard on-policy RL; the distinctive LLM challenge is executing generation, scoring, training, and weight synchronization efficiently at massive scale.</div>
