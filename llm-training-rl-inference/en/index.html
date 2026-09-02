@@ -335,6 +335,29 @@
         <div class="process-node inference"><strong>Production inference</strong><small>SGLang / vLLM</small></div>
       </div>
 
+      <h3>The shared foundation: one training loop</h3>
+      <p>Pre-training, SFT, and RL differ in their data, objectives, and construction of the loss. But whenever parameters are trained, they rely on the same underlying mechanism: <strong>Forward propagation → Calculate loss → Backpropagation → Optimizer update → Next batch</strong>.</p>
+      <div class="process-chart" role="img" aria-label="The forward propagation, loss, backpropagation, and weight update loop shared by pre-training, SFT, and RL.">
+        <div class="process-node"><strong>Batch / Experience</strong><small>Training data or RL experience</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>Forward propagation</strong><small>Compute token probabilities or logits</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node"><strong>Calculate loss</strong><small>Turn the objective into an optimizable scalar</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node training"><strong>Backpropagation</strong><small>Compute gradients for the parameters</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node training"><strong>Optimizer update</strong><small>Update weights and move to the next batch</small></div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Training method</th><th>Input to the forward pass</th><th>How the loss is constructed</th><th>What is usually updated</th></tr></thead>
+        <tbody>
+          <tr><td>Pre-training</td><td>Large batches of text, code, and other tokens</td><td>Next-token cross-entropy, usually over most valid tokens</td><td>Base-model weights</td></tr>
+          <tr><td>SFT</td><td>Prompt + human demonstration</td><td>Still next-token cross-entropy, but usually only response tokens contribute to the loss</td><td>Base weights or LoRA / adapter parameters</td></tr>
+          <tr><td>On-policy RL</td><td>Fresh rollouts, rewards, and advantages</td><td>PPO / GRPO turns reward into a policy loss; KL or value losses may also be included</td><td>Policy weights or adapters; PPO may train a separate critic</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note"><strong>Why does RL appear to have an extra step?</strong>Before optimizing parameters, RL must first generate training experience through rollout inference. This is not literally one forward pass: autoregressive generation repeatedly runs inference forward computation for each new token. After rewards are available, the trainer performs a training forward pass over the prompt and generated response, recomputes token probabilities while building a computation graph, constructs the policy loss, backpropagates, and updates the weights. PPO may also split the same rollout batch into multiple mini-batches and train for several epochs. It is therefore more accurate to say that RL has two kinds of forward stage—not only two forward passes in total. The shared loop above refers to the later parameter-optimization stage.</div>
+
       <div class="branch-chart" role="img" aria-label="Three common post-training approaches: SFT, RLHF, and RL.">
         <div class="branch-source"><div class="process-node active"><strong>Post-training</strong><small>Goal: improve responses, alignment, and task-solving ability</small></div></div>
         <div class="branch-options">
@@ -444,7 +467,8 @@
     </section>
 
     <section id="integration">
-      <div class="section-heading"><div class="number">05</div><h2>Training–inference integration: making generation and training work efficiently together</h2></div>
+      <div class="section-heading"><div class="number">05</div><h2>RL training–inference integration: coordinating rollout generation and training updates</h2></div>
+      <p>Here, “training–inference integration” specifically means <strong>system coordination inside on-policy RL / RLHF training</strong>. Pre-training and SFT also contain forward passes, losses, and backpropagation, but they do not usually require the current policy to repeatedly generate fresh rollout batches and then receive newly synchronized weights. RL therefore makes efficient coordination between the rollout and training sides especially important.</p>
       <p>Now connect the first four sections: the model first uses <strong>Inference</strong> to generate rollouts; PPO/GRPO then use <strong>Training</strong> to update the weights. The new weights return to the inference side to generate the next batch of rollouts. This loop may repeat hundreds or thousands of times.</p>
 
       <div class="loop-chart" role="img" aria-label="The inference engine, environment rewards, PPO/GRPO trainer, and weight synchronization form the on-policy RL system loop.">

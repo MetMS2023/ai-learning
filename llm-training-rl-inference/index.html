@@ -335,6 +335,29 @@
         <div class="process-node inference"><strong>生产推理</strong><small>SGLang / vLLM</small></div>
       </div>
 
+      <h3>共同的底层：都是同一个训练循环</h3>
+      <p>预训练、SFT 和 RL 的数据来源、学习目标与 Loss 构造方式不同；但只要进入“训练并更新参数”的环节，底层都依赖同一套机制：<strong>Forward propagation → Calculate loss → Backpropagation → Optimizer update → Next batch</strong>。</p>
+      <div class="process-chart" role="img" aria-label="预训练、SFT 和 RL 共享的前向传播、损失、反向传播与权重更新循环">
+        <div class="process-node"><strong>Batch / Experience</strong><small>训练数据或 RL 经验</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node active"><strong>Forward propagation</strong><small>计算 Token 概率或 Logits</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node"><strong>Calculate loss</strong><small>把目标转成可优化的数值</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node training"><strong>Backpropagation</strong><small>计算各参数的梯度</small></div>
+        <div class="process-arrow" aria-hidden="true"><span></span></div>
+        <div class="process-node training"><strong>Optimizer update</strong><small>更新权重，进入下一批</small></div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>训练方式</th><th>Forward 前拿到什么</th><th>Loss 怎样构造</th><th>通常更新什么</th></tr></thead>
+        <tbody>
+          <tr><td>预训练</td><td>大规模文本、代码等 Token batch</td><td>Next-token cross-entropy，通常覆盖大部分有效 Token</td><td>基础模型权重</td></tr>
+          <tr><td>SFT</td><td>Prompt + 人类示范回答</td><td>仍是 next-token cross-entropy，但通常只对回答部分计算 Loss</td><td>基础权重或 LoRA / Adapter</td></tr>
+          <tr><td>On-policy RL</td><td>当前策略生成的 Rollout、奖励与 Advantage</td><td>PPO / GRPO 等将奖励转成 Policy loss；还可能包含 KL 或 Value loss</td><td>Policy 模型权重或 Adapter；PPO 还可能单独训练 Critic</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note"><strong>RL 为什么看起来多了一步？</strong>因为 RL 在参数优化前，还要先通过 Rollout inference 生成训练经验。这里不是严格只做一次 Forward：自回归生成每个 Token 时都会反复执行 inference forward。获得奖励后，Trainer 再对 Prompt + 已生成回答执行 training forward pass，重新计算 Token 概率并建立计算图，随后构造 Policy loss、反向传播并更新权重。PPO 还可能把同一批 Rollout 分成多个 mini-batch，并训练多个 epoch。因此更准确地说，RL 包含两类 Forward 阶段，而不是总共只有两次前向传播。上面的共同循环指的是后面真正进行参数优化的训练阶段。</div>
+
       <div class="branch-chart" role="img" aria-label="后训练常见的三类学习方式：SFT、RLHF 和 RL">
         <div class="branch-source"><div class="process-node active"><strong>后训练</strong><small>目标：让模型更会回答、更符合要求、更会解决任务</small></div></div>
         <div class="branch-options">
@@ -444,7 +467,8 @@
     </section>
 
     <section id="integration">
-      <div class="section-heading"><div class="number">05</div><h2>训推一体化：让“生成”和“训练”高效接力</h2></div>
+      <div class="section-heading"><div class="number">05</div><h2>RL 训推一体化：让 Rollout 生成与训练更新高效接力</h2></div>
+      <p>这里讨论的“训推一体化”，特指 <strong>on-policy RL / RLHF 训练中的系统协同</strong>。预训练和 SFT 也包含 Forward、Loss 与 Backpropagation，但它们通常不需要当前策略反复生成新的 Rollout，再把更新后的权重同步回 Rollout 引擎。因此，RL 让训练端与推理端的高效协作变得格外重要。</p>
       <p>现在把前四节串起来：模型先通过<strong>推理</strong>生成 Rollout，PPO/GRPO 再通过<strong>训练</strong>更新权重；新权重又要交回推理端生成下一批 Rollout。这个循环会反复运行成百上千次。</p>
 
       <div class="loop-chart" role="img" aria-label="推理引擎、环境奖励、PPO或GRPO训练器和权重同步形成在线RL系统闭环">
